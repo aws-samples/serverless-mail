@@ -1,0 +1,3 @@
+requires 'Crypt::SMIME';
+requires 'Crypt::OpenSSL::X509';
+requires 'JSON';
