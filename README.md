@@ -1,11 +1,12 @@
-## My Project
+## Serverless Mail
 
-TODO: Fill this README out!
+Samples for building serverless email solutions on AWS. Build enterprise email services without managing servers.  
 
-Be sure to:
+Thoughts, ideas, and contributions welcome!  
 
-* Change the title in this README
-* Edit your repository description on GitHub
+Sample solutions:  
+
+* [smime-signature-validator](smime-signature-validator) - use AWS Lambda to validate S/MIME digital signatures
 
 ## Security
 
