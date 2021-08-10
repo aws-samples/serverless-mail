@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
 
 # install dependencies with:
 # docker run --rm -v $PWD:/var/task shogo82148/p5-aws-lambda:build-5.34-paws.al2 cpanm --verbose --notest --local-lib extlocal --no-man-pages --installdeps .
