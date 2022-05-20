@@ -86,6 +86,8 @@ def lambda_handler(event, context):
       content_type = part.get_content_type()
       content_disposition = str(part.get_content_disposition())
       content = part.get_payload(decode=True)
+      if content_type == 'message/rfc822':
+         content = part.get_payload(decode=False)[0].as_string()
       charset = part.get_content_charset()
       filename = part.get_filename()
       logger.error(f"Part: {part_idx}. Content charset: {charset}. Content type: {content_type}. Content disposition: {content_disposition}. Filename: {filename}");
