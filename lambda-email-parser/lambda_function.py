@@ -154,3 +154,4 @@ def lambda_handler(event, context):
        'statusCode': 200,
        'body': 'Number of parts saved to S3 bucket: ' + destination_bucket + ': ' + str(saved_parts)
    }
+
