@@ -1,0 +1,4 @@
+version: STSv1
+mode: testing
+mx: inbound-smtp.us-east-1.amazonaws.com
+max_age: 86401

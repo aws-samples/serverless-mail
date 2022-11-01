@@ -1,0 +1,4 @@
+aws-cdk-lib==2.41.0
+cdk-nag==2.18.11
+checkdmarc==4.4.3
+dnspython==2.2.1
