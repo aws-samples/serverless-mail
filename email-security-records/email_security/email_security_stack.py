@@ -56,6 +56,16 @@ class EmailSecurityStack(Stack):
                 subject_alternative_names=[MTA_STS_DOMAIN],
                 region="us-east-1",
             )
+            NagSuppressions.add_resource_suppressions(
+                construct=bimi_tls_cert,
+                apply_to_children=True,
+                suppressions=[
+                    {
+                        "id": "AwsSolutions-L1",
+                        "reason": "The custom resource Lambda does not use the latest runtime",
+                    },
+                ],
+            )
 
         else:
 
