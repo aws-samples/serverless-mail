@@ -1,5 +1,3 @@
-from os.path import exists as file_exists
-
 from aws_cdk import (
     CfnOutput,
     RemovalPolicy,
@@ -15,25 +13,11 @@ from aws_cdk import (
 )
 from cdk_nag import NagSuppressions
 from constructs import Construct
-import dns.resolver
 
 import CONFIG
 
 BIMI_DOMAIN = f"{CONFIG.BIMI_ASSETS_SUBDOMAIN}.{CONFIG.EMAIL_DOMAIN}"
 MTA_STS_DOMAIN = f"mta-sts.{CONFIG.EMAIL_DOMAIN}"
-
-
-def generate_mta_sts_policy():
-    mx_answer = dns.resolver.resolve(CONFIG.EMAIL_DOMAIN, "MX")
-
-    policy_lines = ["version: STSv1", f"mode: {CONFIG.MTS_STS_MODE}"]
-
-    for server in mx_answer.rrset:
-        policy_lines.append(f"mx: {server.to_text().split(' ')[1][:-1]}")
-
-    policy_lines.append("max_age: 86401")
-
-    return "\n".join(policy_lines)
 
 
 class EmailSecurityStack(Stack):
@@ -109,14 +93,7 @@ class EmailSecurityStack(Stack):
             auto_delete_objects=True,
         )
 
-        # Generate MTA-STS policy document
-
-        mta_sts_file_path = "assets/.well-known/mta-sts.txt"
-
-        if not file_exists(mta_sts_file_path):
-            with open(mta_sts_file_path, "w") as mta_sts_file:
-                mta_sts_file.write(generate_mta_sts_policy())
-            print("MTS-STS policy file generated from MX records")
+        # MTA-STS policy document
 
         deployment = s3_deployment.BucketDeployment(
             self,
