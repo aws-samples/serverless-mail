@@ -19,9 +19,11 @@ LOGO_FILENAME = "logo.svg"
 VMC_FILENAME = "bimi_vmc.pem"
 
 # MTA-STS config
-MTA_STS_ID = "202203311405"
-MTS_STS_MODE = "testing"
+MTA_STS_ID = "202212311405"
 
 # TLSRPT Addresses
 # The email address that should receive TLS reports
 TLSRPT_ADDRESSES = [""]
+
+# Log retention
+LOG_RETENTION_DAYS = 90

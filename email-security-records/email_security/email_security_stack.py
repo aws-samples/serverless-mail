@@ -1,5 +1,6 @@
 from aws_cdk import (
     CfnOutput,
+    Duration,
     RemovalPolicy,
     Stack,
     aws_certificatemanager as acm,
@@ -69,6 +70,11 @@ class EmailSecurityStack(Stack):
             versioned=True,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
+            lifecycle_rules=[
+                {
+                    "expiration": Duration.days(CONFIG.LOG_RETENTION_DAYS)
+                }
+            ]
         )
         log_bucket.grant_write(iam.ServicePrincipal("delivery.logs.amazonaws.com"))
         NagSuppressions.add_resource_suppressions(
