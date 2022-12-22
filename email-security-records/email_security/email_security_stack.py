@@ -140,6 +140,30 @@ class EmailSecurityStack(Stack):
             ],
         )
 
+        # URL outputs
+
+        bimi_url = CfnOutput(
+            self,
+            "bimi_url",
+            description="BIMI logo URL",
+            value=f"https://{BIMI_DOMAIN}/{CONFIG.LOGO_FILENAME}",
+        )
+
+        mta_sts_policy_url = CfnOutput(
+            self,
+            "mta_sts_policy_url",
+            description="MTA-STS policy URL",
+            value=f"https://{MTA_STS_DOMAIN}/.well-known/mta-sts.txt",
+        )
+
+        if CONFIG.VMC_FILENAME is not None:
+            vmc_url = CfnOutput(
+                self,
+                "vmc_url",
+                description="Verified Mark Certificate URL",
+                value=f"https://{BIMI_DOMAIN}/{CONFIG.VMC_FILENAME}",
+            )
+
         ##### DNS records
 
         bimi_txt_location = f"default._bimi.{CONFIG.EMAIL_DOMAIN}"
