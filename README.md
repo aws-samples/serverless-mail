@@ -9,7 +9,7 @@ Sample solutions:
 * [email-security-records](email-security-records) - AWS-Hosted Records and Files for MTA-STS, TLS-RPT, and BIMI
 * [lambda-email-parser](lambda-email-parser) - an AWS Lambda function that can be triggered via Amazon Simple Storage Service (S3) from Amazon Simple Email Service (SES) inbound receiving, or from Workmail message flow rules, to parse email RFC822 formatted messages and extract message information and attachments into S3. This is a configurable solution so that it can facilitate a variety of use cases.
 * [smime-signature-validator](smime-signature-validator) - use AWS Lambda to validate S/MIME digital signatures
-* [vdm-to-quicksight](vdm-to-quicksight) - provide Virtual Deliverability Manager data to users who do not have VDM access
+* [vdm-to-rds](vdm-to-rds) - provide Virtual Deliverability Manager data to users who do not have VDM access
 
 ## Security
 
