@@ -25,6 +25,8 @@ Navigate to RDS from the AWS Console. On the Splash screen click “Create Datab
 * All other fields leave as defaults. 
 * Click Create database. It will take a few minutes to become available.
 
+Once the database is available. Connect to it and run the provided [sesvdmdb.sql](sesvdmdb.sql) to create the tables to be imported into.
+
 ## Create retrieval AWS Glue job
 
 This job will run a pyspark script to call the VDM API for dates based on a file with the last date of processing in the sesvdmbucket, retrieve the results and store them as csv files in the sesvdmbucket. There are 6 main sections in the script to retrieve each of the 6 different style of metrics.
@@ -51,3 +53,8 @@ This job will run a pyspark script to process the csv files in the sesvdmbucket.
     * Add the Glue connection to your database (this will need to be created before hand)
     * Add the following Job parameter
         * *key*: —bucketname *value*: sesvdmbucket
+
+## Bring it all together
+
+Once you have the database and two Glue jobs, create a Glue workflow to be triggered at midnight. Your workflow should look like this one.
+![vdmtordsworkflow.png](images/vdmtordsworkflow.png)
