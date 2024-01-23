@@ -2,7 +2,7 @@
 
 ## VDM Data ingestion Overview
 
-Ingest data into MySQL (or RDS version of your choice) to enable reporting outside of the Virtual Deliveryabitliy Manager. Amazon Glue jobs query the VDM API daily and store the summarized data in an Amazon RDS MySQL database. 
+Ingest data into MySQL (or RDS version of your choice) to enable reporting outside of the Virtual Deliverability Manager. Amazon Glue jobs query the VDM API daily and store the summarized data in an Amazon RDS MySQL database. 
 
 ![architecture diagram](images/vdmtordsarch.png)
 
