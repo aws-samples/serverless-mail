@@ -11,9 +11,9 @@ from io import BytesIO
 import io
 
 
+# added json conversion - jhblee@
 
 s3 = boto3.client("s3")
-# we do not need workmail functions
 workmail_message_flow = boto3.client('workmailmessageflow')
 logger = logging.getLogger()
 
@@ -23,7 +23,7 @@ def unzip_gz_content(gz_content):
     
 def xml_to_json(xml_string):
    data_dict = xmltodict.parse(xml_string)
-   # Athena only handled single link JSON
+   # json_data = json.dumps(data_dict, indent=4) Athena only handled single link JSON
    json_data = json.dumps(data_dict, separators=(',', ':'))
    return json_data
     
@@ -43,6 +43,15 @@ def lambda_handler(event, context):
    msg = None
    parts = None
    workmail_mutate = None
+
+   # event is from workmail
+   if event.get('messageId'):
+      message_id = event['messageId']
+      key_prefix = message_id
+      raw_msg = workmail_message_flow.get_raw_message_content(messageId=message_id)
+      msg = email.message_from_bytes(raw_msg['messageContent'].read())
+      if os.environ.get('modify_workmail_message'):
+         workmail_mutate = True
 
    # event is from s3
    else:
@@ -138,8 +147,8 @@ def lambda_handler(event, context):
          s3.put_object(Bucket = destination_bucket, Key = key_prefix + "/mimepart" + str(part_idx) + "_" + filename, Body = content)
          print(content)
 
-         #if content_type is gzip, uncompress and convert to JSON
-         if content_type in ["application/gzip"]:
+         
+         if content_type in ["application/gzip", "application/x-gzip"]:
             gz_content = s3.get_object(Bucket=destination_bucket, Key=key_prefix + "/mimepart" + str(part_idx) + "_" + filename)["Body"].read()
             unzipped_content = unzip_gz_content(gz_content)
             gz_key = key_prefix + "/mimepart" + str(part_idx) + "_" + filename
@@ -148,12 +157,42 @@ def lambda_handler(event, context):
             json_content = xml_to_json(unzipped_content)
             unzipped_json_key = unzipped_key.replace('.xml','.json')
             s3.put_object(Bucket=dmarc_report_bucket, Key = dmarc_report_bucket_folder + "/" + unzipped_json_key, Body=json_content)
-            
+         
+         if content_type in ["text/xml"]:
+            xml_content = s3.get_object(Bucket=destination_bucket, Key=key_prefix + "/mimepart" + str(part_idx) + "_" + filename)["Body"].read()
+            xml_key = key_prefix + "/mimepart" + str(part_idx) + "_" + filename
+            xml_key = xml_key.replace('.xml','')
+            s3.put_object(Bucket=destination_bucket, Key=xml_key, Body=xml_content)
+            json_content = xml_to_json(xml_content)
+            unzipped_json_key = xml_key.replace('.json','')
+            s3.put_object(Bucket=dmarc_report_bucket, Key = dmarc_report_bucket_folder + "/" + unzipped_json_key, Body=json_content)
+         
          saved_parts += 1
             
       else:
          logger.error(f"Part {part_idx} has no content. Content type: {content_type}. Content disposition: {content_disposition}.");
+   
+   if workmail_mutate:
+      email_subject = event['subject']
+      modified_object_key = key_prefix + "/" + str(uuid.uuid4())
+      new_subject =  f"[PROCESSED] {email_subject}"
+      msg.replace_header('Subject', new_subject)
+      msg.add_header('X-AWS-Mailsploder-Bucket-Prefix', "s3://" + destination_bucket + "/" + key_prefix)
+      msg.add_header('X-AWS-Mailsploder-Parts-Saved', str(saved_parts))
       
+      # Store updated email in S3
+      s3.put_object(Bucket = destination_bucket, Key = modified_object_key, Body = msg.as_bytes())
+
+      # Update the email in WorkMail
+      s3_reference = {
+         'bucket': destination_bucket,
+         'key': modified_object_key
+      }
+      content = {
+         's3Reference': s3_reference
+      }
+      workmail_message_flow.put_raw_message_content(messageId=message_id, content=content)
+        
    return {
        'statusCode': 200,
        'body': 'Number of parts saved to S3 bucket: ' + destination_bucket + ': ' + str(saved_parts)

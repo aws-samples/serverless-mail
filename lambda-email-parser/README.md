@@ -24,5 +24,5 @@ This solution gives flexibility to the customer to allow for all MIME parts to b
 
 Other example use cases may include the following. Follow-up solutions for these use cases TBD.
 - AWS as a solution for email journaling for archiving, backups, ediscovery, compliance, forensic research, etc. 
-- Processing DMARC reports for analysis : See 'lamda_function_dmarc.py' with required library 'xmltodict.py' The modified function unzips '.gz' files and converts XML file to JSON.  The JSON data is stored in a S3 bucket which can be used to generate visual reports. More instruction will be available in an upcoming blog.
+- Processing DMARC reports for analysis : See 'lamda_function_dmarc.py' with required library 'xmltodict.py' The modified function unzips '.gz' files and converts XML file to JSON.  If the email report contains XML, it will just convert it to JSON. The JSON data is stored in a S3 bucket which can be used to generate visual reports. More instruction will be available in an upcoming blog.
 
