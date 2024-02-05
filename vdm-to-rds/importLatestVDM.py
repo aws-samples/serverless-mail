@@ -460,6 +460,6 @@ while StartDate < EndDate:
     StartDate = StartDate + timedelta(days=1)
     
 # Update the last date run after everything is imported
-s3.put_object(Bucket=bucket, Key=date_filename, Body=date.today().isoformat())
+s3.put_object(Bucket=bucket, Key=date_filename, Body=(EndDate+ timedelta(days=-1)).isoformat())
 
 job.commit()
