@@ -1,0 +1,10 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - npm install -g aws-cdk@2.110.0
+      - python3 -m venv .venv
+      - . .venv/bin/activate
+      - pip install -r requirements.txt
+      - cdk deploy --require-approval never --parameters SenderEmail=$SENDER_EMAIL --parameters RecipientEmail=$RECIPIENT_EMAIL
