@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Components to automate VDM data collection for reports outside of
+  the AWS Console
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+
+  DBPassword:
+    Description: Password for the MySQL database
+    Type: String
+    NoEcho: true
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in
+      the first Availability Zone
+    Type: String
+    Default: 10.192.20.0/24
+
+Resources:
+
+  # S3 Buckets
+  MasterBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  #IAM related resources. Policies and users
+  AWSGlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub ${EnvironmentName}_AWSGlueServiceRole
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"glue.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Description: A single role to be able to manage the vdmtoqs components
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+
+  AWSLambdaVPCAccessExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaVPCAccessExecutionPolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: '*'
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+            Effect: Allow
+      Users: []
+
+  AWSLambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaBasicExecutionPolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: !Sub arn:aws:logs:*:${AWS::AccountId}:*
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+      Users: []
+
+  AWSLambdaVDMFilePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaVDMFilePolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: 
+            - !GetAtt MasterBucket.Arn
+            - !Join ['/', [!GetAtt MasterBucket.Arn, '*']]
+            Action:
+                - s3:ListBucket
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+            Effect: Allow
+      Users: []
+
+  downloadvdmqsfilesrole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      ManagedPolicyArns:
+        - !Ref AWSLambdaBasicExecutionPolicy
+        - !Ref AWSLambdaVPCAccessExecutionPolicy
+        - !Ref AWSLambdaVDMFilePolicy
+      MaxSessionDuration: 3600
+      RoleName: downloadvdmqsfilesrole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+
+  CodeWhispererGrant:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument: |
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "CodeWhispererPermissions",
+                    "Effect": "Allow",
+                    "Action": [
+                        "codewhisperer:GenerateRecommendations"
+                    ],
+                    "Resource": "*"
+                }
+            ]
+        }
+      Roles:
+        - !Ref AWSGlueServiceRole
+      PolicyName: !Sub ${EnvironmentName}_CodeWhispererGrant
+
+  LakeFormationGrant:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument: |
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "LakeFormationDataAccess",
+                    "Effect": "Allow",
+                    "Action": [
+                        "lakeformation:GetDataAccess"
+                    ],
+                    "Resource": "*"
+                }
+            ]
+        }
+      Roles:
+        - !Ref AWSGlueServiceRole
+      PolicyName: !Sub ${EnvironmentName}_LakeFormationReadWrite
+
+  # Lambda
+  DownloadFiles:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Timeout: 30
+      Runtime: python3.9
+      FunctionName: downloadvdmqsfiles
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+          import urllib.request
+          import cfnresponse  
+          import time   
+          from datetime import date, timedelta, datetime     
+
+          def download_file(url,filename,bucketname):
+              s3 = boto3.client("s3")
+              response = urllib.request.urlopen(url)
+              file_content = response.read()
+              s3.put_object(Bucket=bucketname, Key=filename, Body=file_content)
+
+          def lambda_handler(event, context):                
+              try:
+                  bucket = event['ResourceProperties']['bucketname']
+                  status = cfnresponse.SUCCESS
+                  err='worked'
+                  
+                  # download awscli file
+                  download_file(url='https://files.pythonhosted.org/packages/e2/3c/af9e6679c3743ded4feafd17a615215ac4dfe0e5255f3c6adae7f294ab81/awscli-1.29.83-py3-none-any.whl',filename='packages/awscli-1.29.83-py3-none-any.whl',bucketname=bucket)
+                  # download updated boto3 file
+                  download_file(url='https://files.pythonhosted.org/packages/93/66/67cea8fd669c359af04502d5bdf00aa0bfe3918ee64280590a9c9f238c1f/boto3-1.28.83-py3-none-any.whl',filename='packages/boto3-1.28.83-py3-none-any.whl',bucketname=bucket)
+                  # download metricstoMySQL.py for Glue Job
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/metricstoMySQL.py?raw=True',filename='packages/metricstoMySQL.py',bucketname=bucket)
+                  # download importLatestVDM.py for Glue Job
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/importLatestVDM.py?raw=True',filename='packages/importLatestVDM.py',bucketname=bucket)
+                  # create starting lastvdmdate.csv file
+                  EndDate = date.today()
+                  s3b = boto3.client("s3")
+                  s3b.put_object(Bucket=bucket, Key='sesvdm/lastvdmdate.csv', Body=(EndDate+ timedelta(days=-7)).isoformat())
+              except Exception as e:
+                  err = repr(e)
+                  status = cfnresponse.FAILED
+
+              # returning status so CloudFormation execution receives the right signals
+              returneddata = {'err':err}
+              cfnresponse.send(event, context, status, returneddata)
+
+  InvokeDownloadFiles:
+    Type: AWS::CloudFormation::CustomResource
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt DownloadFiles.Arn
+      bucketname: !Ref MasterBucket
+
+  ImportLatestVDM:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub ${EnvironmentName}_importLatestVDM
+      Description: Import the latest VDM file into the RDS database
+      Role: !GetAtt AWSGlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: !Join ['/', [!GetAtt MasterBucket.Arn, 'packages/importLatestVDM.py']]
+
+  # Dataabase  
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} 
+      DBName: !Sub ${EnvironmentName}
+      Engine: mysql
+      MasterUsername: 'admin'
+      MasterUserPassword: !Ref DBPassword
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 20 
+      DeletionProtection: false
