@@ -583,7 +583,7 @@ Resources:
           select_headers: ALL
       Code:
         S3Bucket: !Ref MasterBucket
-        S3Key: 'packages/lambda_function_dmarc.zip'
+        S3Key: 'packages/ses-dmarc-email-parser.zip'
 
 Outputs:
   SecretARN:
