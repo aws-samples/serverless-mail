@@ -291,7 +291,7 @@ Resources:
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
-        "--bucketname": !Ref MasterBucket
+        "--bucketname": !Sub ${MasterBucket}/sesvdm
         "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
         "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
         "--python-modules-installer-option": "update"
@@ -313,7 +313,7 @@ Resources:
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
-        "--bucketname": !Ref MasterBucket
+        "--bucketname": !Sub ${MasterBucket}/sesvdm
         "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
         "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
         "--python-modules-installer-option": "update"
@@ -339,7 +339,7 @@ Resources:
         Name: !Sub ${EnvironmentName}-sesvdm-connection
         ConnectionType: JDBC
         ConnectionProperties:
-          JDBC_CONNECTION_URL: !Sub "jdbc:mysql://${DBInstance.Endpoint.Address}:3306/${EnvironmentName}_sesvdm"
+          JDBC_CONNECTION_URL: !Sub "jdbc:mysql://${DBInstance.Endpoint.Address}:3306/sesvdm"
           USERNAME: admin
           PASSWORD: !Ref DBPassword
         PhysicalConnectionRequirements:
