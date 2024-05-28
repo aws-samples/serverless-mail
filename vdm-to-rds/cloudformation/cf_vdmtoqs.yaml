@@ -541,8 +541,7 @@ Resources:
                   # download importLatestVDM.py for Glue Job
                   download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/importLatestVDM.py?raw=True',filename='packages/importLatestVDM.py',bucketname=bucket)
                   # download xmldict
-                  # download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/lambda_function_dmarc.zip',bucketname=bucket)
-                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/cloudformation-ext-vdm/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/ses-dmarc-email-parser.zip',bucketname=bucket)
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/lambda_function_dmarc.zip',bucketname=bucket)
                   # create starting lastvdmdate.csv file
                   EndDate = date.today()
                   s3b = boto3.client("s3")
