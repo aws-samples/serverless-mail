@@ -1,0 +1,592 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Components to automate VDM data collection for reports outside of
+  the AWS Console
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+
+  DBPassword:
+    Description: Password for the MySQL database
+    Type: String
+    NoEcho: true
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.11.0/24
+
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.192.20.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
+    Type: String
+    Default: 10.192.21.0/24
+
+Resources:
+
+  # S3 Buckets
+  MasterBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  #IAM related resources. Policies and users
+  AWSGlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub ${EnvironmentName}_AWSGlueServiceRole
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"glue.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Description: A single role to be able to manage the vdmtoqs components
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+
+  AWSLambdaVPCAccessExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaVPCAccessExecutionPolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: '*'
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+            Effect: Allow
+      Users: []
+
+  AWSLambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaBasicExecutionPolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: !Sub arn:aws:logs:*:${AWS::AccountId}:*
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+      Users: []
+
+  AWSLambdaVDMFilePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaVDMFilePolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Resource: 
+            - !GetAtt MasterBucket.Arn
+            - !Join ['/', [!GetAtt MasterBucket.Arn, '*']]
+            Action:
+                - s3:ListBucket
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+            Effect: Allow
+      Users: []
+
+  downloadvdmqsfilesrole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      ManagedPolicyArns:
+        - !Ref AWSLambdaBasicExecutionPolicy
+        - !Ref AWSLambdaVPCAccessExecutionPolicy
+        - !Ref AWSLambdaVDMFilePolicy
+      MaxSessionDuration: 3600
+      RoleName: downloadvdmqsfilesrole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+
+  CodeWhispererGrant:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument: |
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "CodeWhispererPermissions",
+                    "Effect": "Allow",
+                    "Action": [
+                        "codewhisperer:GenerateRecommendations"
+                    ],
+                    "Resource": "*"
+                }
+            ]
+        }
+      Roles:
+        - !Ref AWSGlueServiceRole
+      PolicyName: !Sub ${EnvironmentName}_CodeWhispererGrant
+
+  LakeFormationGrant:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument: |
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "LakeFormationDataAccess",
+                    "Effect": "Allow",
+                    "Action": [
+                        "lakeformation:GetDataAccess"
+                    ],
+                    "Resource": "*"
+                }
+            ]
+        }
+      Roles:
+        - !Ref AWSGlueServiceRole
+      PolicyName: !Sub ${EnvironmentName}_LakeFormationReadWrite
+
+  # Database  
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Retain
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} 
+      DBName: sesvdm
+      Engine: mysql
+      MasterUsername: admin
+      MasterUserPassword: !Ref DBPassword
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: 5
+      PubliclyAccessible: false 
+      DeletionProtection: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups: 
+        - !Ref RDSSecurityGroup
+
+  # Glue assests for VDM data collection
+  ImportLatestVDMJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub ${EnvironmentName}_importLatestVDM
+      Description: Import the latest VDM file into the RDS database
+      Role: !GetAtt AWSGlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: !Sub s3://${MasterBucket}/packages/importLatestVDM.py
+      GlueVersion: "4.0"
+      DefaultArguments:
+        "--enable-auto-scaling": "true"
+        "--job-bookmark-option": "job-bookmark-disable"
+        "--bucketname": !Sub ${MasterBucket}/sesvdm
+        "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
+        "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
+        "--python-modules-installer-option": "update"
+      MaxRetries: 0
+      NumberOfWorkers: 4
+      WorkerType: G.1X
+
+  VDMtoRDSJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub ${EnvironmentName}_vdmtoqs
+      Description: Collect VDM data and send to RDS
+      Role: !GetAtt AWSGlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: !Sub s3://${MasterBucket}/packages/metricstoMySQL.py
+      GlueVersion: "4.0"
+      DefaultArguments:
+        "--enable-auto-scaling": "true"
+        "--job-bookmark-option": "job-bookmark-disable"
+        "--bucketname": !Sub ${MasterBucket}/sesvdm
+        "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
+        "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
+        "--python-modules-installer-option": "update"
+      MaxRetries: 0
+      NumberOfWorkers: 4
+      WorkerType: G.1X
+      Connections:
+        Connections:
+          - !Sub ${EnvironmentName}-sesvdm-connection
+
+  Database:
+        Type: "AWS::Glue::Database"
+        Properties:
+            DatabaseInput: 
+                Name: !Sub "${EnvironmentName}_gdc"
+            CatalogId: !Ref "AWS::AccountId"
+
+  GlueMySQLConnection:
+    Type: AWS::Glue::Connection
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      ConnectionInput:
+        Name: !Sub ${EnvironmentName}-sesvdm-connection
+        ConnectionType: JDBC
+        ConnectionProperties:
+          JDBC_CONNECTION_URL: !Sub "jdbc:mysql://${DBInstance.Endpoint.Address}:3306/sesvdm"
+          USERNAME: admin
+          PASSWORD: !Ref DBPassword
+        PhysicalConnectionRequirements:
+          AvailabilityZone: !Select [0, !GetAZs ""]
+          SecurityGroupIdList:
+            - !Ref RDSSecurityGroup
+          SubnetId: !Ref PrivateSubnet1
+
+  # Networking and VPC environment
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}_VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}_IGW
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets available for the RDS instance
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Public Routes
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+      
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Glue connection          
+      SecurityGroupIngress:
+      - IpProtocol: "tcp"
+        FromPort: 0
+        SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
+        ToPort: 65535
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "-1"
+        FromPort: -1
+        ToPort: -1
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "tcp"
+        FromPort: 22
+        ToPort: 22
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "tcp"
+        FromPort: 443
+        ToPort: 443
+      SecurityGroupEgress:
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "tcp"
+        FromPort: 0
+        ToPort: 65535
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "-1"
+        FromPort: -1
+        ToPort: -1  
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}_RDSSecurityGroup
+
+  # Endpoints
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC  # Reference to your VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      RouteTableIds:
+        - !Ref PrivateRouteTable1  # Reference to your private route table
+        - !Ref PublicRouteTable   # Reference to your public route table
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: '*'
+            Resource: '*'
+      VpcEndpointType: Gateway
+
+  # Secret to be able to retrieve the password entered  
+  RDSSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${EnvironmentName}_rds_password
+      Description: 'Password entered when you deployed the stack'
+      SecretString:
+        !Sub |
+          {
+            "username": "admin",
+            "password": "${DBPassword}"
+          }
+
+  # Lambda
+  DownloadFiles:
+    Type: AWS::Lambda::Function
+    Properties:
+      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Timeout: 30
+      Runtime: python3.9
+      FunctionName: downloadvdmqsfiles
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+          import urllib.request
+          import cfnresponse  
+          import time   
+          from datetime import date, timedelta, datetime     
+
+          def download_file(url,filename,bucketname):
+              s3 = boto3.client("s3")
+              response = urllib.request.urlopen(url)
+              file_content = response.read()
+              s3.put_object(Bucket=bucketname, Key=filename, Body=file_content)
+
+          def lambda_handler(event, context):                
+              try:
+                  bucket = event['ResourceProperties']['bucketname']
+                  status = cfnresponse.SUCCESS
+                  err='worked'
+                  
+                  # download awscli file
+                  download_file(url='https://files.pythonhosted.org/packages/e2/3c/af9e6679c3743ded4feafd17a615215ac4dfe0e5255f3c6adae7f294ab81/awscli-1.29.83-py3-none-any.whl',filename='packages/awscli-1.29.83-py3-none-any.whl',bucketname=bucket)
+                  # download updated boto3 file
+                  download_file(url='https://files.pythonhosted.org/packages/93/66/67cea8fd669c359af04502d5bdf00aa0bfe3918ee64280590a9c9f238c1f/boto3-1.28.83-py3-none-any.whl',filename='packages/boto3-1.28.83-py3-none-any.whl',bucketname=bucket)
+                  # download metricstoMySQL.py for Glue Job
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/metricstoMySQL.py?raw=True',filename='packages/metricstoMySQL.py',bucketname=bucket)
+                  # download importLatestVDM.py for Glue Job
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/importLatestVDM.py?raw=True',filename='packages/importLatestVDM.py',bucketname=bucket)
+                  # download xmldict
+                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/lambda_function_dmarc.zip',bucketname=bucket)
+                  # create starting lastvdmdate.csv file
+                  EndDate = date.today()
+                  s3b = boto3.client("s3")
+                  s3b.put_object(Bucket=bucket, Key='sesvdm/lastvdmdate.csv', Body=(EndDate+ timedelta(days=-7)).isoformat())
+              except Exception as e:
+                  err = repr(e)
+                  status = cfnresponse.FAILED
+
+              # returning status so CloudFormation execution receives the right signals
+              returneddata = {'err':err}
+              cfnresponse.send(event, context, status, returneddata)
+
+  InvokeDownloadFiles:
+    Type: AWS::CloudFormation::CustomResource
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt DownloadFiles.Arn
+      bucketname: !Ref MasterBucket
+
+  FunctionDmarc:
+    Type: AWS::Lambda::Function
+    DependsOn: InvokeDownloadFiles
+    Properties:
+      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Timeout: 30
+      Runtime: python3.9
+      FunctionName: ses-dmarc-email-parser
+      Handler: index.lambda_handler
+      Environment:
+        Variables:
+          destination_bucket: !Sub ${MasterBucket}/ses-dmarc-email-parsed
+          dmarc_report_bucket: !Sub ${MasterBucket}/ses-dmarc-email-json-data
+          dmarc_report_bucket_folder: !Sub ${MasterBucket}/raw
+          source_bucket: !Sub ${MasterBucket}/ses-dmarc-email-received
+          modify_workmail_message: 'false'
+          select_headers: ALL
+      Code:
+        S3Bucket: !Ref MasterBucket
+        S3Key: 'packages/ses-dmarc-email-parser.zip'
+
+Outputs:
+  SecretARN:
+    Description: The ARN of the created secret
+    Value: !Ref RDSSecret
+    Export:
+      Name: SecretARN
