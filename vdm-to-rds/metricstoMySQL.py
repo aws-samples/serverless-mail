@@ -39,7 +39,7 @@ for page in result:
         for key in page[ "Contents" ]:
             keyString = key[ "Key" ]
             # exclude the file that shows that last date of processing
-            if keyString != "sesvdm/lastvdmdate.csv":
+            if keyString != "lastvdmdate.csv":
                 # split the file name to extract date and table name
                 keyParse = keyString.split(".")
                 tblname = keyParse[0]
