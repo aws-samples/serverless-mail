@@ -81,6 +81,90 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+  
+  sesdmarcemailparsed:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ses-dmarc-email-parsed-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  
+  sesdmarcemailjsondata:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ses-dmarc-email-json-data-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  
+  dmarcraw:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub dmarc-raw-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  
+  sesdmarcemailreceived:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ses-dmarc-email-received-${AWS::AccountId}
+      Tags:
+        - Key: project
+          Value: !Sub ${EnvironmentName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   #IAM related resources. Policies and users
   AWSGlueServiceRole:
@@ -278,16 +362,14 @@ Resources:
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
-        "--bucketname": !Sub ${sesvdmBucket}
-        "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
-        "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
-        "--python-modules-installer-option": "update"
+        "--bucketname": !Ref sesvdmBucket
+        "--mysqlconn": !Ref GlueMySQLConnection
       MaxRetries: 0
       NumberOfWorkers: 4
       WorkerType: G.1X
       Connections:
         Connections:
-          - !Sub ${EnvironmentName}-sesvdm-connection
+          - !Ref GlueMySQLConnection
 
   Database:
         Type: "AWS::Glue::Database"
@@ -590,6 +672,7 @@ Resources:
           def lambda_handler(event, context):                
               try:
                   bucket = event['ResourceProperties']['bucketname']
+                  sesvdmbucket = event['ResourceProperties']['sesvdmbucket']
                   status = cfnresponse.SUCCESS
                   err='worked'
                   
@@ -602,11 +685,13 @@ Resources:
                   # download importLatestVDM.py for Glue Job
                   download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/importLatestVDM.py?raw=True',filename='packages/importLatestVDM.py',bucketname=bucket)
                   # download xmldict
-                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/ses-dmarc-email-parser.zip',bucketname=bucket)
+                  download_file(url='https://github.com/aws-samples/serverless-mail/raw/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/ses-dmarc-email-parser.zip',bucketname=bucket)
+                  # download createtables scripts
+                  download_file(url='https://github.com/aws-samples/serverless-mail/raw/main/vdm-to-rds/createsesvdmtables/createsesvdmtables.zip', filename='packages/createsesvdmtables.zip',bucketname=bucket)
                   # create starting lastvdmdate.csv file
                   EndDate = date.today()
                   s3b = boto3.client("s3")
-                  s3b.put_object(Bucket=bucket, Key='sesvdm/lastvdmdate.csv', Body=(EndDate+ timedelta(days=-7)).isoformat())
+                  s3b.put_object(Bucket=sesvdmbucket, Key='lastvdmdate.csv', Body=(EndDate+ timedelta(days=-7)).isoformat())
               except Exception as e:
                   err = repr(e)
                   status = cfnresponse.FAILED
@@ -623,6 +708,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt DownloadFiles.Arn
       bucketname: !Ref MasterBucket
+      sesvdmbucket: !Ref sesvdmBucket
 
   FunctionDmarc:
     Type: AWS::Lambda::Function
@@ -635,15 +721,42 @@ Resources:
       Handler: index.lambda_handler
       Environment:
         Variables:
-          destination_bucket: !Sub ${MasterBucket}/ses-dmarc-email-parsed
-          dmarc_report_bucket: !Sub ${MasterBucket}/ses-dmarc-email-json-data
-          dmarc_report_bucket_folder: !Sub ${MasterBucket}/raw
-          source_bucket: !Sub ${MasterBucket}/ses-dmarc-email-received
+          destination_bucket: !Ref sesdmarcemailparsed
+          dmarc_report_bucket: !Ref sesdmarcemailjsondata
+          dmarc_report_bucket_folder: !Ref dmarcraw
+          source_bucket: !Ref sesdmarcemailreceived
           modify_workmail_message: 'false'
           select_headers: ALL
       Code:
         S3Bucket: !Ref MasterBucket
-        S3Key: 'packages/ses-dmarc-email-parser.zip'
+        S3Key: 'packages/ses-dmarc-email-parser.zip' 
+
+  FunctionCreateTables:
+    Type: AWS::Lambda::Function
+    DependsOn: InvokeDownloadFiles
+    Properties:
+      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Timeout: 30
+      Runtime: python3.9
+      FunctionName: createsesvdmtables
+      Handler: index.lambda_handler
+      Environment:
+        Variables:
+          db_name: "sesvdm"
+          dbpassword: !Ref DBPassword
+          dbuser: "admin"
+          mysql_host: !GetAtt DBInstance.Endpoint.Address
+      Code:
+        S3Bucket: !Ref MasterBucket
+        S3Key: 'packages/createsesvdmtables.zip'
+
+  InvokeCreateTables:
+    Type: AWS::CloudFormation::CustomResource
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt FunctionCreateTables.Arn
 
 Outputs:
   SecretARN:
