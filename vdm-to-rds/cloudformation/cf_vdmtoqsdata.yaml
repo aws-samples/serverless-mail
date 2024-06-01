@@ -739,7 +739,7 @@ Resources:
       Timeout: 30
       Runtime: python3.9
       FunctionName: createsesvdmtables
-      Handler: index.lambda_handler
+      Handler: lambda_function.lambda_handler
       Environment:
         Variables:
           db_name: "sesvdm"
