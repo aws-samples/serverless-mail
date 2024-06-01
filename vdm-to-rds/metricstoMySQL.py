@@ -14,6 +14,7 @@ import boto3
 ## @params: [JOB_NAME, bucketname]
 args = getResolvedOptions(sys.argv, ['JOB_NAME','bucketname'])
 bucketname = args['bucketname']
+mysqlconn = args['mysqlconn']
 curdate = date.today()
 s3 = boto3.client('s3')
 
@@ -50,7 +51,7 @@ for page in result:
                 conDt = {
                     "dbtable": tblname,
                     "useConnectionProperties": "true",
-                    "connectionName": "sesvdmmysql",
+                    "connectionName": mysqlconn,
                     "sampleQuery": "select IMPORT_DATE from {} where METRIC_DATE = '{}' limit 1".format(tblname,tbldate)
                 }
                 dyf_dt = glueContext.create_dynamic_frame.from_options('mysql', connection_options = conDt, transformation_ctx = "dyf_dt")
@@ -72,7 +73,7 @@ for page in result:
                     conTbl = {
                         "dbtable": tblname,
                         "useConnectionProperties": "true",
-                        "connectionName": "sesvdmmysql"
+                        "connectionName": mysqlconn
                     }
                     # Add the date of the metric and the date of import to the dataframe
                     df=dyf.toDF().withColumn("METRIC_DATE", lit(str(tbldate)))
