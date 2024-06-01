@@ -12,7 +12,7 @@ import boto3
 
 
 ## @params: [JOB_NAME, bucketname]
-args = getResolvedOptions(sys.argv, ['JOB_NAME','bucketname'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME','bucketname','mysqlconn'])
 bucketname = args['bucketname']
 mysqlconn = args['mysqlconn']
 curdate = date.today()
