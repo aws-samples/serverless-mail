@@ -237,6 +237,14 @@ Resources:
             - !Join ['/', [!GetAtt MasterBucket.Arn, '*']]
             - !GetAtt sesvdmBucket.Arn
             - !Join ['/', [!GetAtt sesvdmBucket.Arn, '*']]
+            - !GetAtt sesvdmBucket.Arn
+            - !Join ['/', [!GetAtt sesdmarcemailparsed.Arn, '*']]
+            - !GetAtt sesvdmBucket.Arn
+            - !Join ['/', [!GetAtt sesdmarcemailjsondata.Arn, '*']]
+            - !GetAtt sesvdmBucket.Arn
+            - !Join ['/', [!GetAtt dmarcraw.Arn, '*']]
+            - !GetAtt sesvdmBucket.Arn
+            - !Join ['/', [!GetAtt sesdmarcemailreceived.Arn, '*']]
             Action:
                 - s3:ListBucket
                 - s3:GetObject
@@ -371,12 +379,74 @@ Resources:
         Connections:
           - !Ref GlueMySQLConnection
 
-  Database:
-        Type: "AWS::Glue::Database"
+  GlueDatabase:
+    Type: "AWS::Glue::Database"
+    Properties:
+        DatabaseInput: 
+            Name: !Sub "${EnvironmentName}_gdc"
+        CatalogId: !Ref "AWS::AccountId"  
+
+  dmarcrawgt:
+        Type: "AWS::Glue::Table"
         Properties:
-            DatabaseInput: 
-                Name: !Sub "${EnvironmentName}_gdc"
+            DatabaseName: !Ref GlueDatabase
             CatalogId: !Ref "AWS::AccountId"
+            TableInput: 
+                Owner: "owner"
+                TableType: "EXTERNAL_TABLE"
+                Parameters: 
+                    sizeKey: "6968"
+                    objectCount: "18"
+                    UPDATED_BY_CRAWLER: "dmarc_reports2"
+                    CrawlerSchemaSerializerVersion: "1.0"
+                    recordCount: "8"
+                    averageRecordSize: "871"
+                    exclusions: !Sub "[\"s3://${sesdmarcemailjsondata}/raw//Unsaved/**\"]"
+                    CrawlerSchemaDeserializerVersion: "1.0"
+                    compressionType: "none"
+                    classification: "json"
+                    typeOfData: "file"
+                StorageDescriptor: 
+                    Columns: 
+                      - 
+                        Name: "feedback"
+                        Type: "struct<version:string,report_metadata:struct<org_name:string,email:string,extra_contact_info:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string>,record:struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<header_from:string,envelope_from:string>,auth_results:struct<dkim:struct<domain:string,selector:string,result:string>,spf:struct<domain:string,scope:string,result:string>>>>"
+                    Location: !Sub "s3://${sesdmarcemailjsondata}/raw/"
+                    InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+                    OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+                    Compressed: false
+                    NumberOfBuckets: -1
+                    SerdeInfo: 
+                        SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
+                        Parameters: 
+                            paths: "feedback"
+                    Parameters: 
+                        CrawlerSchemaDeserializerVersion: "1.0"
+                        compressionType: "none"
+                        classification: "json"
+                        typeOfData: "file"
+                    StoredAsSubDirectories: false
+                Name: "raw"
+
+  DmarcRawCrawler:
+        Type: "AWS::Glue::Crawler"
+        DependsOn: dmarcrawgt
+        Properties:
+            Name: "dmarc_reports2"
+            Role: !Ref AWSGlueServiceRole
+            Targets: 
+                S3Targets: 
+                  - 
+                    Path: !Sub "s3://${sesdmarcemailjsondata}/raw/"
+                    Exclusions: 
+                      - "/Unsaved/**"
+            DatabaseName: !Ref GlueDatabase
+            SchemaChangePolicy: 
+                UpdateBehavior: "LOG"
+                DeleteBehavior: "LOG"
+            Schedule: 
+                ScheduleExpression: "cron(30 9 * * ? *)"
+            Configuration: "{\"Version\":1.0,\"CreatePartitionIndex\":true}"
 
   GlueMySQLConnection:
     Type: AWS::Glue::Connection
@@ -624,6 +694,10 @@ Resources:
         FromPort: 3306
         ToPort: 3306
         DestinationSecurityGroupId: !GetAtt RDSSecurityGroup.GroupId
+      - IpProtocol: "tcp"
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -738,7 +812,7 @@ Resources:
     DependsOn: InvokeDownloadFiles
     Properties:
       Role: !GetAtt downloadvdmqsfilesrole.Arn
-      Timeout: 30
+      Timeout: 300
       Runtime: python3.9
       FunctionName: ses-dmarc-email-parser
       Handler: index.lambda_handler
@@ -759,7 +833,7 @@ Resources:
     DependsOn: InvokeDownloadFiles
     Properties:
       Role: !GetAtt downloadvdmqsfilesrole.Arn
-      Timeout: 30
+      Timeout: 90
       Runtime: python3.9
       FunctionName: createsesvdmtables
       Handler: lambda_function.lambda_handler
