@@ -166,6 +166,15 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
+  S3EventNotification:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref sesdmarcemailreceived
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt FunctionDmarc.Arn
+
   #IAM related resources. Policies and users
   AWSGlueServiceRole:
     Type: AWS::IAM::Role
@@ -815,7 +824,7 @@ Resources:
       Timeout: 300
       Runtime: python3.9
       FunctionName: ses-dmarc-email-parser
-      Handler: index.lambda_handler
+      Handler: lambda_function.lambda_handler
       Environment:
         Variables:
           destination_bucket: !Ref sesdmarcemailparsed
