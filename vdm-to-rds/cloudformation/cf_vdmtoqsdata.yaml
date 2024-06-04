@@ -147,6 +147,7 @@ Resources:
   
   sesdmarcemailreceived:
     Type: AWS::S3::Bucket
+    DependsOn: LambdaInvokePermission
     Properties:
       BucketName: !Sub ses-dmarc-email-received-${AWS::AccountId}
       Tags:
@@ -169,6 +170,15 @@ Resources:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
             Function: !GetAtt FunctionDmarc.Arn
+  
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt FunctionDmarc.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 's3.amazonaws.com'
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::ses-dmarc-email-received-${AWS::AccountId}
 
   #IAM related resources. Policies and users
   AWSGlueServiceRole:
@@ -363,7 +373,7 @@ Resources:
   VDMtoRDSJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: !Sub ${EnvironmentName}_vdmtoqs
+      Name: !Sub ${EnvironmentName}_vdmtords
       Description: Collect VDM data and send to RDS
       Role: !GetAtt AWSGlueServiceRole.Arn
       Command:
