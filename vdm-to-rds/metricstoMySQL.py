@@ -12,11 +12,13 @@ import boto3
 
 
 ## @params: [JOB_NAME, bucketname]
-args = getResolvedOptions(sys.argv, ['JOB_NAME','bucketname'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME','bucketname','mysqlconn'])
 bucketname = args['bucketname']
 mysqlconn = args['mysqlconn']
 curdate = date.today()
 s3 = boto3.client('s3')
+
+print(mysqlconn)
 
 sc = SparkContext()
 glueContext = GlueContext(sc)
@@ -41,51 +43,56 @@ for page in result:
             keyString = key[ "Key" ]
             # exclude the file that shows that last date of processing
             if keyString != "lastvdmdate.csv":
-                # split the file name to extract date and table name
-                keyParse = keyString.split(".")
-                tblname = keyParse[0]
-                tbldate = keyParse[1]
-                logger.info("tblname: " + tblname + " tbldate: " + tbldate + " keyString: " + keyString)
-
-                # if data already exists for this date, skip it
-                conDt = {
-                    "dbtable": tblname,
-                    "useConnectionProperties": "true",
-                    "connectionName": mysqlconn,
-                    "sampleQuery": "select IMPORT_DATE from {} where METRIC_DATE = '{}' limit 1".format(tblname,tbldate)
-                }
-                dyf_dt = glueContext.create_dynamic_frame.from_options('mysql', connection_options = conDt, transformation_ctx = "dyf_dt")
-
-                if dyf_dt.count() == 0:
-                # Create a dynamic frame from the file being processed
-                    dyf = glueContext.create_dynamic_frame.from_options(
-                        format_options={
-                            "quoteChar": '"',
-                            "withHeader": True,
-                            "separator": ",",
-                            "optimizePerformance": False,
-                        },
-                        connection_type="s3",
-                        connection_options={"paths": ["s3://{}/{}".format(bucketname, keyString)]},
-                        format="csv"
-                    )
-                    #create DB connection to table
-                    conTbl = {
+                try:
+                    # split the file name to extract date and table name
+                    keyParse = keyString.split(".")
+                    tblname = keyParse[0]
+                    tbldate = keyParse[1]
+                    logger.info("tblname: " + tblname + " tbldate: " + tbldate + " keyString: " + keyString)
+    
+                    # if data already exists for this date, skip it
+                    conDt = {
                         "dbtable": tblname,
                         "useConnectionProperties": "true",
-                        "connectionName": mysqlconn
+                        "connectionName": mysqlconn,
+                        "sampleQuery": "select IMPORT_DATE from {} where METRIC_DATE = '{}' limit 1".format(tblname,tbldate)
                     }
-                    # Add the date of the metric and the date of import to the dataframe
-                    df=dyf.toDF().withColumn("METRIC_DATE", lit(str(tbldate)))
-                    df=df.withColumn("IMPORT_DATE", lit(str(curdate)))
-                    # Rename the IDENTITY column to not use a reserved word in the table structure
-                    if has_column(df,"IDENTITY"):
-                        df = df.withColumnRenamed("IDENTITY","EMAIL_IDENTITY")
-                    dyf = DynamicFrame.fromDF(df, glueContext, "dyf") 
-                    # Write the frames to the database to insert rows into existing tables
-                    glueContext.write_dynamic_frame.from_options(dyf, 'mysql', connection_options=conTbl, transformation_ctx="insertData")
-                
-                # Delete the file from S3 after it has been processed
-                s3.delete_object(Bucket=bucketname,Key=keyString)
+                    dyf_dt = glueContext.create_dynamic_frame.from_options('mysql', connection_options = conDt, transformation_ctx = "dyf_dt")
+    
+                    if dyf_dt.count() == 0:
+                    # Create a dynamic frame from the file being processed
+                        dyf = glueContext.create_dynamic_frame.from_options(
+                            format_options={
+                                "quoteChar": '"',
+                                "withHeader": True,
+                                "separator": ",",
+                                "optimizePerformance": False,
+                            },
+                            connection_type="s3",
+                            connection_options={"paths": ["s3://{}/{}".format(bucketname, keyString)]},
+                            format="csv"
+                        )
+                        print(tblname)
+                        #create DB connection to table
+                        conTbl = {
+                            "dbtable": tblname,
+                            "useConnectionProperties": "true",
+                            "connectionName": mysqlconn
+                        }
+                        # Add the date of the metric and the date of import to the dataframe
+                        df=dyf.toDF().withColumn("METRIC_DATE", lit(str(tbldate)))
+                        df=df.withColumn("IMPORT_DATE", lit(str(curdate)))
+                        # Rename the IDENTITY column to not use a reserved word in the table structure
+                        if has_column(df,"IDENTITY"):
+                            df = df.withColumnRenamed("IDENTITY","EMAIL_IDENTITY")
+                        dyf = DynamicFrame.fromDF(df, glueContext, "dyf") 
+                        # Write the frames to the database to insert rows into existing tables
+                        glueContext.write_dynamic_frame.from_options(dyf, 'mysql', connection_options=conTbl, transformation_ctx="insertData")
+                    
+                    # Delete the file from S3 after it has been processed
+                    s3.delete_object(Bucket=bucketname,Key=keyString)
+                except Exception as e:
+                    errstr = f'Tablename: ${tblname} failed with error: ${e}'
+                    print(errstr)
 
 job.commit()
