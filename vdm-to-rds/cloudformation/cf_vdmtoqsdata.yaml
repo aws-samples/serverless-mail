@@ -165,11 +165,6 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-
-  S3EventNotification:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref sesdmarcemailreceived
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -253,7 +248,7 @@ Resources:
             - !GetAtt sesvdmBucket.Arn
             - !Join ['/', [!GetAtt dmarcraw.Arn, '*']]
             - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!GetAtt sesdmarcemailreceived.Arn, '*']]
+            - !Join ['/', [!Sub 'arn:aws:s3:::ses-dmarc-email-received-${AWS::AccountId}', '*']]
             Action:
                 - s3:ListBucket
                 - s3:GetObject
@@ -830,7 +825,7 @@ Resources:
           destination_bucket: !Ref sesdmarcemailparsed
           dmarc_report_bucket: !Ref sesdmarcemailjsondata
           dmarc_report_bucket_folder: !Ref dmarcraw
-          source_bucket: !Ref sesdmarcemailreceived
+          source_bucket: !Sub ses-dmarc-email-received-${AWS::AccountId}
           modify_workmail_message: 'false'
           select_headers: ALL
       Code:
