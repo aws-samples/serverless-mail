@@ -260,23 +260,21 @@ Resources:
             - !GetAtt sesvdmBucket.Arn
             - !Join ['/', [!Sub 'arn:aws:s3:::ses-dmarc-email-received-${AWS::AccountId}', '*']]
             Action:
-                - s3:ListBucket
-                - s3:GetObject
-                - s3:PutObject
-                - s3:DeleteObject
+                - s3-object-lambda:*
+                - s3:*
             Effect: Allow
       Users: []
 
-  downloadvdmqsfilesrole:
+  LambdaVDMExecRole:
     Type: AWS::IAM::Role
     Properties:
       Path: /service-role/
       ManagedPolicyArns:
         - !Ref AWSLambdaBasicExecutionPolicy
         - !Ref AWSLambdaVPCAccessExecutionPolicy
-        - !Ref AWSLambdaVDMFilePolicy
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
       MaxSessionDuration: 3600
-      RoleName: downloadvdmqsfilesrole
+      RoleName: LambdaVDMExecRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -761,7 +759,7 @@ Resources:
   DownloadFiles:
     Type: AWS::Lambda::Function
     Properties:
-      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 30
       Runtime: python3.9
       FunctionName: downloadvdmqsfiles
@@ -825,9 +823,9 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: InvokeDownloadFiles
     Properties:
-      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 300
-      Runtime: python3.9
+      Runtime: python3.11
       FunctionName: ses-dmarc-email-parser
       Handler: lambda_function.lambda_handler
       Environment:
@@ -846,7 +844,7 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: InvokeDownloadFiles
     Properties:
-      Role: !GetAtt downloadvdmqsfilesrole.Arn
+      Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 90
       Runtime: python3.9
       FunctionName: createsesvdmtables
