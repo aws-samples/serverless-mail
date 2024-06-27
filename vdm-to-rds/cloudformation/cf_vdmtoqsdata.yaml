@@ -325,6 +325,107 @@ Resources:
         - !Ref AWSGlueServiceRole
       PolicyName: !Sub ${EnvironmentName}_LakeFormationReadWrite
 
+  AWSQuickSightRDSPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightRDSPolicy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight describe permissions to AWS RDS resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "rds:Describe*"
+          Effect: "Allow"
+      Roles:
+      - !Sub "${EnvironmentName}-quicksight-service-role"
+  
+  AWSQuickSightS3Policy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightS3Policy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight read permission to Amazon S3 resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "arn:aws:s3:::*"
+          Action: "s3:ListAllMyBuckets"
+          Effect: "Allow"
+        - Resource:
+          - !Sub "arn:aws:s3:::${sesvdmBucket}"
+          - !Sub "arn:aws:s3:::${sesdmarcemailparsed}"
+          - !Sub "arn:aws:s3:::${sesdmarcemailjsondata}"
+          Action:
+          - "s3:ListBucket"
+          Effect: "Allow"
+        - Resource:
+          - !Sub "arn:aws:s3:::${sesvdmBucket}"
+          - !Sub "arn:aws:s3:::${sesdmarcemailparsed}"
+          - !Sub "arn:aws:s3:::${sesdmarcemailjsondata}"
+          Action:
+          - "s3:GetObject"
+          - "s3:GetObjectVersion"
+          Effect: "Allow"
+      Roles:
+      - !Sub "${EnvironmentName}-quicksight-service-role"
+      
+  AWSQuickSightIAMPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightIAMPolicy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight list permissions to AWS IAM resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "iam:List*"
+          Effect: "Allow"
+      Roles:
+      - !Sub "${EnvironmentName}-quicksight-service-role"
+
+  QSServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - Ref: AWSQuickSightS3Policy
+      - Ref: AWSQuickSightRDSPolicy
+      - "arn:aws:iam::aws:policy/service-role/AWSQuicksightAthenaAccess"
+      - Ref: AWSQuickSightIAMPolicy
+      MaxSessionDuration: 3600
+      RoleName: !Sub "${EnvironmentName}-quicksight-service-role"
+      Policies:
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action:
+            - "quicksight:ListVPCConnections"
+            - "quicksight:CreateVPCConnection"
+            - "quicksight:DescribeVPCConnection"
+            - "quicksight:DeleteVPCConnection"
+            - "quicksight:UpdateVPCConnection"
+            - "ec2:describeSubnets"
+            - "ec2:describeVpcs"
+            - "ec2:describeSecurityGroups"
+            Effect: "Allow"
+            Sid: "Statement1"
+        PolicyName: "QSVPCConn"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "quicksight.amazonaws.com"
+
   # Database  
   DBInstance:
     Type: AWS::RDS::DBInstance
@@ -874,7 +975,37 @@ Resources:
 
 Outputs:
   SecretARN:
-    Description: The ARN of the created secret
+    Description: The ARN the secret to allow you to retrieve the database password entered
     Value: !Ref RDSSecret
     Export:
       Name: SecretARN
+
+  DBInstanceID:
+    Description: The instance ID of the RDS instance created
+    Value: !Ref DBInstance
+    Export:
+      Name: DBInstanceID
+
+  QuickSightServiceRole:
+    Description: The name of the role to use when configuring QuickSight
+    Value: !Ref QSServiceRole
+    Export:
+      Name: QuickSightServiceRole
+
+  VPCID:
+    Description: The ID of the VPC created to house the stack
+    Value: !Ref VPC
+    Export:
+      Name: VPCID
+
+  PrivateSubnet1Arn:
+    Description: The ARN of the private subnet 1 to use with QuickSight resource deployment
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnet1Arn
+      
+  PrivateSubnet2Arn:
+    Description: The ARN of the private subnet 2 to use with QuickSight resource deployment
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: PrivateSubnet2Arn

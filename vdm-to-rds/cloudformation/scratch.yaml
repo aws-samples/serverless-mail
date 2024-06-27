@@ -1,0 +1,111 @@
+---
+Metadata:
+  TemplateId: "arn:aws:cloudformation:us-east-1:894588334418:generatedTemplate/cb9febe5-9003-4409-bf82-402ae8d179fe"
+Resources:
+  AWSQuickSightS3Policy:
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Retain"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightS3Policy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight read permission to Amazon S3 resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "arn:aws:s3:::*"
+          Action: "s3:ListAllMyBuckets"
+          Effect: "Allow"
+        - Resource:
+          - "arn:aws:s3:::aws-athena-query-results-us-east-1-894588334418"
+          - "arn:aws:s3:::sesvdmraw"
+          - "arn:aws:s3:::ses-dmarc-email-json-data"
+          Action:
+          - "s3:ListBucket"
+          Effect: "Allow"
+        - Resource:
+          - "arn:aws:s3:::aws-athena-query-results-us-east-1-894588334418/*"
+          - "arn:aws:s3:::sesvdmraw/*"
+          - "arn:aws:s3:::ses-dmarc-email-json-data/*"
+          Action:
+          - "s3:GetObject"
+          - "s3:GetObjectVersion"
+          Effect: "Allow"
+      Roles:
+      - "aws-quicksight-service-role-v0"
+      Users: []
+  AWSQuickSightRDSPolicy:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Retain"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightRDSPolicy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight describe permissions to AWS RDS resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "rds:Describe*"
+          Effect: "Allow"
+      Roles:
+      - "aws-quicksight-service-role-v0"
+      Users: []
+  AWSQuickSightIAMPolicy:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Retain"
+    Properties:
+      ManagedPolicyName: "AWSQuickSightIAMPolicy"
+      Path: "/service-role/"
+      Description: "Grants Amazon QuickSight list permissions to AWS IAM resources"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "iam:List*"
+          Effect: "Allow"
+      Roles:
+      - "aws-quicksight-service-role-v0"
+      Users: []
+  IAMRole00awsquicksightservicerolev000XNB2x:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Retain"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - Ref: "IAMManagedPolicy00policyserviceroleAWSQuickSightS3Policy00FbXse"
+      - Ref: "IAMManagedPolicy00policyserviceroleAWSQuickSightIAMPolicy00GNHjA"
+      - "arn:aws:iam::aws:policy/service-role/AWSQuicksightAthenaAccess"
+      - Ref: "IAMManagedPolicy00policyserviceroleAWSQuickSightRDSPolicy00hbhiC"
+      MaxSessionDuration: 3600
+      RoleName: "aws-quicksight-service-role-v0"
+      Policies:
+      - PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action:
+            - "quicksight:ListVPCConnections"
+            - "quicksight:CreateVPCConnection"
+            - "quicksight:DescribeVPCConnection"
+            - "quicksight:DeleteVPCConnection"
+            - "quicksight:UpdateVPCConnection"
+            - "ec2:describeSubnets"
+            - "ec2:describeVpcs"
+            - "ec2:describeSecurityGroups"
+            Effect: "Allow"
+            Sid: "Statement1"
+        PolicyName: "QSVPCConn"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "quicksight.amazonaws.com"
