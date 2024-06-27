@@ -339,8 +339,6 @@ Resources:
           Action:
           - "rds:Describe*"
           Effect: "Allow"
-      Roles:
-      - !Sub "${EnvironmentName}-quicksight-service-role"
   
   AWSQuickSightS3Policy:
     Type: "AWS::IAM::ManagedPolicy"
@@ -370,8 +368,6 @@ Resources:
           - "s3:GetObject"
           - "s3:GetObjectVersion"
           Effect: "Allow"
-      Roles:
-      - !Sub "${EnvironmentName}-quicksight-service-role"
       
   AWSQuickSightIAMPolicy:
     Type: "AWS::IAM::ManagedPolicy"
@@ -387,8 +383,6 @@ Resources:
           Action:
           - "iam:List*"
           Effect: "Allow"
-      Roles:
-      - !Sub "${EnvironmentName}-quicksight-service-role"
 
   QSServiceRole:
     Type: "AWS::IAM::Role"
