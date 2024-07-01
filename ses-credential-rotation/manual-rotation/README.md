@@ -43,5 +43,22 @@ The following parameters are required when deploying the Cloudformation stack
 
 NOTE - Note, this solution can be deployed multiple times to generate additional users and secrets to support a scenario where you have more than one AWS SES sending requirement, or want to limit the impact of a compromised credential. Each deployment requires a unique IAMUserName and SecretName.
 
+## Operating the solution
+
+The solution reads the list of servers that are using this secret from a DynamoDB table, this will need manually populating in order for the solution to send the necessary alerts. This can be done via the console or via the command line :
+
+```
+aws dynamodb put-item --table-name manualrotation-AWSSESRotationDynamoDBTable-133GO9OY7DDID --item "{\"Server\": {\"S\": \"Server1\"}}"
+```
+
+## Testing the solution
+
+* In the AWS console, go to CloudFormationStack’s Resources tab
+* Find the LogicalID = CredentialRotationLambdaStateMachine
+* Click the PhisicalID link to open the Step Function
+* Click Start exectuion & Click Start execution button
+* Follow the execution in the graph view or table view
+
+
 
 
