@@ -40,6 +40,7 @@ The following parameters are required when deploying the Cloudformation stack
 * AWS CloudFormation will provision and configure the resources as defined in the template. This will take about 10 minutes to fully deploy. You can view the status under the stack’s resources tab in the AWS CloudFormation console.
 * As the template is deploying, you will receive an email to the ConfirmationEmailAddress asking you to confirm you wish to subscribe, ensure you click this link to receive further emails from the SNS topic.
 * The template deploys an Amazon EventBridge Scheduler to trigger the execution of the Credential Rotation step function. This is initially setup to execute on the last day of every 3rd month (31st Jan, 30th April, 31st July, 31st October). You can adjust this schedule via the Scheduler section of the EventBridge console, the name of the schedule is also listed as an output of the CloudFormation stack.
+
 NOTE - Note, this solution can be deployed multiple times to generate additional users and secrets to support a scenario where you have more than one AWS SES sending requirement, or want to limit the impact of a compromised credential. Each deployment requires a unique IAMUserName and SecretName.
 
 
