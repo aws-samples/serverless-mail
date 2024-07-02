@@ -10,7 +10,7 @@ You will require an S3 bucket in the relevant region to store the Lambda code pa
 aws s3api create-bucket --bucket cloudformation-code-12345
 ```
 
-Once created, open a terminal in the Manual Rotation Folder and run the aws cloudformation package command to package the Lambda functions and upload them to S3. This command will output an updated version of the template to the --output-template-file location
+Once created, open a terminal in the manual-rotation folder and run the aws cloudformation package command to package the Lambda functions and upload them to S3. This command will output an updated version of the template to the --output-template-file location
 
 ```
 aws cloudformation package --template-file sesmanualrotation.yaml --s3-bucket cloudformation-code-12345 --output-template-file sesmanualoutput.yaml
@@ -28,7 +28,7 @@ The following parameters are required when deploying the Cloudformation stack
 
 * SecretName - How to name the secret values in Systems Manager Paramter Store, for example "SESEmailSecret"
 * IAMUserName - The name of the IAM user to create that will be able to send email, for example "ses-send-email-user"
-* KMSKeyID - (Optional) The ID of a Customer Managed key to encrypt the secret in Parameter Store, the default key AWS managed key is used if this is not specific 
+* KMSKeyID - (Optional) The ID of a Customer Managed key to encrypt the secret in Parameter Store, the default key AWS managed key is used if this is not specified 
 * SESSendingResourceCondition - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
 * SESSendingResourceValue - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on SESSendingResourceCondition
 * * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
@@ -58,6 +58,14 @@ aws dynamodb put-item --table-name manualrotation-AWSSESRotationDynamoDBTable-13
 * Click the PhisicalID link to open the Step Function
 * Click Start exectuion & Click Start execution button
 * Follow the execution in the graph view or table view
+
+## Remediating a compromised credential
+
+By default, the solution checks every 24 hours to see if the manual rotation emails have been acknowledged. If you need to response to a credential compromise quickly, you can de-activate the compromised credential manually in the IAM user console. When you check the Security Credentials tab of the user you should see two keys, both with details of when they were Created, this information can be used to identify the oldest credential.
+
+# Costs to operate
+
+All AWS services used in this solution have negligible cost, it is likely monthly costs will be well below $1.00 when operating this solution. 
 
 
 
