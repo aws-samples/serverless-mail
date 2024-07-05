@@ -38,6 +38,9 @@ lastEndDate = datedf.agg({"col0": "max"}).collect()[0][0]
 lastEndDate = datetime.strptime(lastEndDate, '%Y-%m-%d').date()
 StartDate = lastEndDate + timedelta(days=1)
 EndDate = date.today()
+# VDM keeps 60 days of data. Adjusting date to capture last 60 days in the case the StartDate is older than that
+if (StartDate < EndDate - timedelta(days=60)):
+    StartDate = EndDate - timedelta(days=60)
 
 # Loop through all dates since the start date to ensure data is gathered for the accurate date of measurement
 while StartDate < EndDate:
