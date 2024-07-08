@@ -26,7 +26,7 @@ aws cloudformation deploy --template-file sesmanualoutput.yaml --stack-name SESM
 
 The following parameters are required when deploying the Cloudformation stack
 
-* SecretName - How to name the secret values in Systems Manager Paramter Store, for example "SESEmailSecret"
+* SecretName - How to name the secret values in Systems Manager Parameter Store, for example "SESEmailSecret"
 * IAMUserName - The name of the IAM user to create that will be able to send email, for example "ses-send-email-user"
 * KMSKeyID - (Optional) The ID of a Customer Managed key to encrypt the secret in Parameter Store, the default key AWS managed key is used if this is not specified 
 * SESSendingResourceCondition - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
@@ -55,8 +55,8 @@ aws dynamodb put-item --table-name manualrotation-AWSSESRotationDynamoDBTable-13
 
 * In the AWS console, go to CloudFormationStack’s Resources tab
 * Find the LogicalID = CredentialRotationLambdaStateMachine
-* Click the PhisicalID link to open the Step Function
-* Click Start exectuion & Click Start execution button
+* Click the PhysicalID link to open the Step Function
+* Click Start execution & Click Start execution button
 * Follow the execution in the graph view or table view
 
 ## Remediating a compromised credential

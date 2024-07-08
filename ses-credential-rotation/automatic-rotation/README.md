@@ -47,7 +47,7 @@ NOTE - Note, this solution can be deployed multiple times to generate additional
 
 ## Using your own KMS Key
 
-If you make use of your own KMS Key, the Key policy of the Customer Managed Key must allow the IAM role of the Rotation Lambda to perform kms:Decrypt and kms:GenerateDataKey actions. As this role is not created until after the template is deployed just must use the "Rotate Secret Immediately" button to create the first secret once the role has been given the neccessary permission to use the KMS key, until that time the Secret will appear as empty in AWS Secrets Manager
+If you make use of your own KMS Key, the Key policy of the Customer Managed Key must allow the IAM role of the Rotation Lambda to perform kms:Decrypt and kms:GenerateDataKey actions. As this role is not created until after the template is deployed just must use the "Rotate Secret Immediately" button to create the first secret once the role has been given the necessary permission to use the KMS key, until that time the Secret will appear as empty in AWS Secrets Manager
 
 ## Testing the solution
 
