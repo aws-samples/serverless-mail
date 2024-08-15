@@ -19,7 +19,7 @@ aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket
 You can then deploy the template via the AWS Console or using the AWS CLI
 
 ```
-aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticlRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServers SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServers SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM
 ```
 
 ### Parameter Definition
