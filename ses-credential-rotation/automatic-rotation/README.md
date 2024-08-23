@@ -30,22 +30,6 @@ aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name S
 
 For example, your edited code will look like this: ```aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServer SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM'''
 
-### Parameter Definition
-
-The following parameters are required when deploying the Cloudformation stack
-
-* **SecretName** - Name for the secret values (SMTP passwords) in Systems Manager Parameter Store, for our example we use **SESEmailSecret****
-* **IAMUserName** - The name of the IAM user you'll create to send email, for example for our example we use **ses-send-email-user****
-* **MaximumSecretAgeInDays** - The maximum age of a secret, after which it is rotated
-* **KMSKeyID** - (Optional) The ID of a Customer Managed Key to encrypt the secret in Secrets Manager. The default key AWS managed key is used if a Customer Managed Key is not specified. 
-* **SESSendingResourceCondition** - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
-* **SESSendingResourceValue** - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on **SESSendingResourceCondition**
-* * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
-* * If you used identity, the format for value is: arn:${Partition}:ses:${Region}:${Account}:identity/${IdentityName}
-* *SSMRotationDocument* - The name of the Systems Manager document to use to rotate the password on the relevant servers
-* **SSMServerTag** - The name of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag name **EmailServers** 
-* **SSMServerTagValue** - The value of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag value **True**.  
-
 ## Stack Creation
 
 * AWS CloudFormation will provision and configure the resources as defined in the template. This will take about 10 minutes to fully deploy. You can view the status under the stack’s resources tab in the AWS CloudFormation console.
@@ -64,17 +48,33 @@ From the AWS Systems Manager console under Documents > Owned by me,
 
 If you make use of your own KMS Key, the Key policy of the Customer Managed Key must allow the IAM role of the Rotation Lambda to perform kms:Decrypt and kms:GenerateDataKey actions. As this role is not created until after the template is deployed just must use the "Rotate Secret Immediately" button to create the first secret once the role has been given the necessary permission to use the KMS key, until that time the Secret will appear as empty in AWS Secrets Manager
 
+### Parameter Definition
+
+The following parameters are used when deploying the Cloudformation stack
+
+* **SecretName** - Name for the secret values (SMTP passwords) in Systems Manager Parameter Store, for our example we use **SESEmailSecret****
+* **IAMUserName** - The name of the IAM user you'll create to send email, for example for our example we use **ses-send-email-user****
+* **MaximumSecretAgeInDays** - The maximum age of a secret, after which it is rotated
+* **KMSKeyID** - (Optional) The ID of a Customer Managed Key to encrypt the secret in Secrets Manager. The default key AWS managed key is used if a Customer Managed Key is not specified. 
+* **SESSendingResourceCondition** - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
+* **SESSendingResourceValue** - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on **SESSendingResourceCondition**
+* * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
+* * If you used identity, the format for value is: arn:${Partition}:ses:${Region}:${Account}:identity/${IdentityName}
+* *SSMRotationDocument* - The name of the Systems Manager document to use to rotate the password on the relevant servers
+* **SSMServerTag** - The name of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag name **EmailServers** 
+* **SSMServerTagValue** - The value of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag value **True**.  
+
 ## Testing the solution
 
-To test the solution, you can request that Secrets Manager performs an immediate rotation. Locate the secret in Secrets Manager and then select "Rotate Secret immediately" from the Rotation tab of the Console.
+To test the solution, you can instruct AWS Secrets Manager to perform a rotation immediately. From AWS Secrets Manager console, locate your secret (SESEmailSecret), select "Rotate Secret immediately" from the Rotation tab of the Console.
 
 You can track the progress of the rotation by locating the logs of the Lambda that is deployed to manage the rotation. 
 
-* In the AWS console, go to CloudFormationStack’s Resources tab
-* Find the LogicalID = SESSecretRotationFunction
-* Click the PhisicalID link to open the Lambda
-* Under the Monitor Tab, select the "View CloudWatch logs" button in the to right
-* The logs should show the rotation flow through 4 stages - create_secret, set_secret, test_secret, finish_secret. More details of each stage are available [here](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_lambda-functions.html)
+* In the AWS console, go to CloudFormationStack’s Resources tab.
+* Find the LogicalID = **SESSecretRotationFunction**.
+* Click the Resources tab and click the PhysicalID link for the **SESSecretRotationFunction** Lambda.
+* In the Lambda console, click the **Monitor** & click the **View CloudWatch logs** button.
+* Open the latest Log stream. The logs should show the rotation flow through 4 steps - ```create_secret, set_secret, test_secret, finish_secret```. More details of each stage are available [here](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_lambda-functions.html)
 
 ## Remediating a compromised credential
 
