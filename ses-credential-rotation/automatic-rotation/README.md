@@ -4,39 +4,47 @@ This folder contains Cloudformation templates and Lambda code that deploys the A
 
 ## Deployment
 
-You will require an S3 bucket in the relevant region to store the Lambda code packages required to deploy the solution. This can be created via the console or you can use the AWS CLI
+If using an IDE, ensure you are using the correct AWS Account credentials. If using AWS CloudShell, ensure you are in the correct AWS region. 
+
+You will need an AWS S3 bucket in the same region as your AWS Systems and Secrets Manager to store the CloudFormation Template and Lambda code packages required to deploy the solution. Copy the following code, replace the value in the <replace-me-with-your-value> and execute in the AWS CLI (optionally you can use the AWS S3 Console). 
+
+- For example your edited code will look like this: ```aws s3api create-bucket --bucket foo_co-smtp-auto-rotate-092024 --region us-west-2 --create-bucket-configuration '{"LocationConstraint":"us-west-2"}````
 
 ```
-aws s3api create-bucket --bucket cloudformation-code-12345
+aws s3api create-bucket --bucket <provide-a-globally-unique-S3bucket-name> --region <your-aws-region> --create-bucket-configuration '{"LocationConstraint":"<your-aws-region>"}'
 ```
 
-Once created, open a terminal in the automatic-rotation folder and run the aws cloudformation package command to package the Lambda functions and upload them to S3. This command will output an updated version of the template to the --output-template-file location
+Once you've created the S3 bucket, in your terminal app, navigate to /automatic-rotation/, copy & edit the code below, replacing the value in the --s3-bucket <globally-unique-bucket-name-from-above> with the S3 bucket you created in the pervious step. Execute the edited AWS cloudformation package command in the CLI to package the Lambda functions and upload them to S3. This command will output an updated version of the template to the --output-template-file location
+
+For example your edited code will look like this: ```aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket foo_co-smtp-auto-rotate-092024 --output-template-file sesautomaticoutput.yaml```
 
 ```
-aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket cloudformation-code-12345 --output-template-file sesautomaticoutput.yaml
+aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket <globally-unique-S3bucket-name-from-above> --output-template-file sesautomaticoutput.yaml
 ```
 
-You can then deploy the template via the AWS Console or using the AWS CLI
+Copy & edit the code below, replacing the values in SSMServerTag=<EmailServers> SSMServerTagValue=<True> with the values you've decorated your email servers with (we use “EmailServers” and “True”, but you can use any tag and value).
 
 ```
-aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServers SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=<EmailServers> SSMServerTagValue=<True> --capabilities CAPABILITY_NAMED_IAM
 ```
+
+For example, your edited code will look like this: ```aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServer SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM'''
 
 ### Parameter Definition
 
 The following parameters are required when deploying the Cloudformation stack
 
-* SecretName - How to name the secret values in Systems Manager Paramter Store, for example "SESEmailSecret"
-* IAMUserName - The name of the IAM user to create that will be able to send email, for example "ses-send-email-user"
-* MaximumSecretAgeInDays - The maximum age of a secret, after this it will be rotated
-* KMSKeyID - (Optional) The ID of a Customer Managed key to encrypt the secret in Secrets Manager, the default key AWS managed key is used if this is not specified. 
-* SESSendingResourceCondition - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
-* SESSendingResourceValue - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on SESSendingResourceCondition
+* **SecretName** - Name for the secret values (SMTP passwords) in Systems Manager Parameter Store, for our example we use **SESEmailSecret****
+* **IAMUserName** - The name of the IAM user you'll create to send email, for example for our example we use **ses-send-email-user****
+* **MaximumSecretAgeInDays** - The maximum age of a secret, after which it is rotated
+* **KMSKeyID** - (Optional) The ID of a Customer Managed Key to encrypt the secret in Secrets Manager. The default key AWS managed key is used if a Customer Managed Key is not specified. 
+* **SESSendingResourceCondition** - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
+* **SESSendingResourceValue** - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on **SESSendingResourceCondition**
 * * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
 * * If you used identity, the format for value is: arn:${Partition}:ses:${Region}:${Account}:identity/${IdentityName}
-* SSMRotationDocument - The name of the SSM document to use to rotate the password on the relevant servers
-* SSMServerTag - The name of the Tag to identify which server to run the SSM Rotation Document On
-* SSMServerTagValue - The value of the Tag to identify which servers to run the 
+* *SSMRotationDocument* - The name of the Systems Manager document to use to rotate the password on the relevant servers
+* **SSMServerTag** - The name of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag name **EmailServers** 
+* **SSMServerTagValue** - The value of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag value **True**.  
 
 ## Stack Creation
 
@@ -44,6 +52,13 @@ The following parameters are required when deploying the Cloudformation stack
 * The template enables automatic secret rotation for the secret based on the MaximumSecretAgeInDays, the exact rotation schedule will be managed by AWS Secrets Manager
 
 NOTE - Note, this solution can be deployed multiple times to generate additional users and secrets to support a scenario where you have more than one AWS SES sending requirement, or want to limit the impact of a compromised credential. Each deployment requires a unique IAMUserName and SecretName.
+
+## Testing the Systems Manager document for your email server(s)
+From the AWS Systems Manager console under Documents > Owned by me, 
+1. Click on the appropriate document 
+2. Use the Run command button in the top right to start the execution process.
+3. Ensure the Document is selected, provide the new username and password, select a test instance, and click Run.
+4. Verify the intended changes have been made to the instance, and the document is ready to be called from the Lambda function setup by the CloudFormation template.
 
 ## Using your own KMS Key
 
