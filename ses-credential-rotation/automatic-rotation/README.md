@@ -8,15 +8,19 @@ If using an IDE, ensure you are using the correct AWS Account credentials. If us
 
 You will need an AWS S3 bucket in the same region as your AWS Systems and Secrets Manager to store the CloudFormation Template and Lambda code packages required to deploy the solution. Copy the following code, replace the value in the <replace-me-with-your-value> and execute in the AWS CLI (optionally you can use the AWS S3 Console). 
 
-- For example your edited code will look like this: ```aws s3api create-bucket --bucket foo_co-smtp-auto-rotate-092024 --region us-west-2 --create-bucket-configuration '{"LocationConstraint":"us-west-2"}````
+- For example your edited code will look like this: 
+```aws s3api create-bucket --bucket foo-co-smtp-auto-rotate-092024```
 
 ```
 aws s3api create-bucket --bucket <provide-a-globally-unique-S3bucket-name> --region <your-aws-region> --create-bucket-configuration '{"LocationConstraint":"<your-aws-region>"}'
 ```
 
+Note - if you are using a region other than us-east-1, append the create-bucket command with  ```--region us-west-2 --create-bucket-configuration '{"LocationConstraint":"your-aws-region"}'```
+
 Once you've created the S3 bucket, in your terminal app, navigate to /automatic-rotation/, copy & edit the code below, replacing the value in the --s3-bucket <globally-unique-bucket-name-from-above> with the S3 bucket you created in the pervious step. Execute the edited AWS cloudformation package command in the CLI to package the Lambda functions and upload them to S3. This command will output an updated version of the template to the --output-template-file location
 
-For example your edited code will look like this: ```aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket foo_co-smtp-auto-rotate-092024 --output-template-file sesautomaticoutput.yaml```
+For example your edited code will look like this: 
+```aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket foo-co-smtp-auto-rotate-092024 --output-template-file sesautomaticoutput.yaml```
 
 ```
 aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket <globally-unique-S3bucket-name-from-above> --output-template-file sesautomaticoutput.yaml
@@ -28,7 +32,8 @@ Copy & edit the code below, replacing the values in SSMServerTag=<EmailServers> 
 aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=<EmailServers> SSMServerTagValue=<True> --capabilities CAPABILITY_NAMED_IAM
 ```
 
-For example, your edited code will look like this: ```aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServer SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM'''
+For example, your edited code will look like this: 
+```aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServer SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM```
 
 ## Stack Creation
 
