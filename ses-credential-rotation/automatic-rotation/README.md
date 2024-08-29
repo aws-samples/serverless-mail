@@ -4,7 +4,7 @@ This folder contains Cloudformation templates and Lambda code that deploys the A
 
 ## Deployment
 
-If using an IDE, ensure you are using the correct AWS Account credentials. If using AWS CloudShell, ensure you are in the correct AWS region. Ensure you run these commands from the directory that contains the README file
+If using an IDE, ensure you are using the correct AWS Account credentials. If using AWS CloudShell, ensure you are in the correct AWS region. Ensure you run these commands from the directory that contains this README file
 
 You will need an AWS S3 bucket in the same region as your AWS Systems and Secrets Manager to store the CloudFormation Template and Lambda code packages required to deploy the solution. Copy the following code, replace the value in the <replace-me-with-your-value> and execute in the AWS CLI (optionally you can use the AWS S3 Console). 
 
