@@ -26,10 +26,22 @@ For example your edited code will look like this:
 aws cloudformation package --template-file sesautomaticrotation.yaml --s3-bucket <globally-unique-S3bucket-name-from-above> --output-template-file sesautomaticoutput.yaml
 ```
 
-Copy & edit the code below, replacing the values in SSMServerTag=<EmailServers> SSMServerTagValue=<True> with the values you've decorated your email servers with (we use “EmailServers” and “True”, but you can use any tag and value).
+Copy & edit the code below, replacing the parameters with the correct values for your environment as per the following defintion :
+
+* **SecretName** - Name for the secret values (SMTP passwords) in Systems Manager Parameter Store, for our example we use **sessecret** 
+* **IAMUserName** - The name of the IAM user you'll create to send email, for our example we use **sesecret**
+* **MaximumSecretAgeInDays** - The maximum age of a secret, after which it is rotated - if not specificed this defaults to **30**
+* **KMSKeyID** - (Optional) The ID of a Customer Managed Key to encrypt the secret in Secrets Manager. The default key AWS managed key is used if a Customer Managed Key is not specified. 
+* **SESSendingResourceCondition** - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
+* **SESSendingResourceValue** - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on **SESSendingResourceCondition**
+* * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
+* * If you used identity, the format for value is: arn:${Partition}:ses:${Region}:${Account}:identity/${IdentityName}
+* **SSMRotationDocument** - The name of the Systems Manager document to use to rotate the password on the relevant servers, for our example we use **MySSMDocument**
+* **SSMServerTag** - The name of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag name **EmailServers** 
+* **SSMServerTagValue** - The value of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag value **True**.  
 
 ```
-aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=<EmailServers> SSMServerTagValue=<True> --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file sesautomaticoutput.yaml --stack-name SESAutomaticRotation --parameter-overrides SecretName=sessecret IAMUserName=sessecret SESSendingResourceCondition=identity SESSendingResourceValue=myidentity SSMRotationDocument=MySSMDocument SSMServerTag=EmailServers SSMServerTagValue=True --capabilities CAPABILITY_NAMED_IAM
 ```
 
 For example, your edited code will look like this: 
@@ -53,21 +65,7 @@ From the AWS Systems Manager console under Documents > Owned by me,
 
 If you make use of your own KMS Key, the Key policy of the Customer Managed Key must allow the IAM role of the Rotation Lambda to perform kms:Decrypt and kms:GenerateDataKey actions. As this role is not created until after the template is deployed just must use the "Rotate Secret Immediately" button to create the first secret once the role has been given the necessary permission to use the KMS key, until that time the Secret will appear as empty in AWS Secrets Manager
 
-### Parameter Definition
 
-The following parameters are used when deploying the Cloudformation stack
-
-* **SecretName** - Name for the secret values (SMTP passwords) in Systems Manager Parameter Store, for our example we use **SESEmailSecret****
-* **IAMUserName** - The name of the IAM user you'll create to send email, for example for our example we use **ses-send-email-user****
-* **MaximumSecretAgeInDays** - The maximum age of a secret, after which it is rotated
-* **KMSKeyID** - (Optional) The ID of a Customer Managed Key to encrypt the secret in Secrets Manager. The default key AWS managed key is used if a Customer Managed Key is not specified. 
-* **SESSendingResourceCondition** - Valid values are configuration-set or identity - This is the resource type that will be given IAM permission to send raw email via SMTP
-* **SESSendingResourceValue** - This is the resource name that will be given IAM permission to send raw email via SMTP. This must be a configuration-set name or identity name, depending on **SESSendingResourceCondition**
-* * If you used configuration-set, the format for value is:  arn:${Partition}:ses:${Region}:${Account}:configuration-set/${ConfigurationSetName}
-* * If you used identity, the format for value is: arn:${Partition}:ses:${Region}:${Account}:identity/${IdentityName}
-* *SSMRotationDocument* - The name of the Systems Manager document to use to rotate the password on the relevant servers
-* **SSMServerTag** - The name of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag name **EmailServers** 
-* **SSMServerTagValue** - The value of the Tag to identify which email server on which you'll run the SSM Rotation Document. We use the tag value **True**.  
 
 ## Testing the solution
 
