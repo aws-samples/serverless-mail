@@ -27,6 +27,14 @@ logger.info("boto3version:" + boto3.__version__)
 bucket = args['bucketname']
 date_filename = 'lastvdmdate.csv'
 
+# Check if the data_filename exists or if this is first run
+objectList = s3.list_objects_v2(Bucket=bucket, Prefix=date_filename)
+if not objectList['KeyCount']:
+    # File does not exist, create it
+    EndDate = date.today()
+    s3.put_object(Bucket=bucket, Key=date_filename, Body=(EndDate + timedelta(days=-7)).isoformat())
+
+
 # Get dates for the current run based on the last run
 datedyf = glueContext.create_dynamic_frame.from_options(
     connection_type="s3",

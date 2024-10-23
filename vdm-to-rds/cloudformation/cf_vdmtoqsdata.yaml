@@ -28,14 +28,14 @@ Parameters:
     Type: String
     Default: VDMReporting
 
+  HistoricDataLoadDays:
+    Description: How many days of historic data to load from VDM into the data stores- max of 60 days
+    Type: Number
+    Default: 7
+
+
 Resources:
   # S3 Buckets
-  # We shouldn't need the master bucket
-  MasterBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub master-${EnvironmentName}-${AWS::AccountId}
-
   sesvdmBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -286,9 +286,10 @@ Resources:
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
-        "--bucketname": !Sub ${sesvdmBucket}
+        "--bucketname": !Ref sesvdmBucket
         "--python-modules-installer-option": "--upgrade"
         "--additional-python-modules": "boto3=1.28.23"
+        "--historic-data-load-days": !Ref HistoricDataLoadDays
       MaxRetries: 0
       NumberOfWorkers: 4
       WorkerType: G.1X
@@ -667,7 +668,7 @@ Resources:
         Variables:
           account_number: !Ref AWS::AccountId
           database_name: !Ref GlueDatabase
-          output_s3_bucket: !Ref MasterBucket
+          output_s3_bucket: !Ref sesvdmBucket
           glue_table_name: !Ref DMARCJsonDataTable
           glue_evaluated_table_name: !Ref DMARCJsonEvaluatedDataTable
   
@@ -718,8 +719,8 @@ Resources:
                   - s3:AbortMultipartUpload
                   - s3:GetBucketLocation
                 Resource: 
-                  - !GetAtt MasterBucket.Arn
-                  - !Sub ${MasterBucket.Arn}/*
+                  - !GetAtt sesvdmBucket.Arn
+                  - !Sub {sesvdmBucket.Arn}/*
 
   CreateAthenaViewsTrigger:
     Type: AWS::CloudFormation::CustomResource
