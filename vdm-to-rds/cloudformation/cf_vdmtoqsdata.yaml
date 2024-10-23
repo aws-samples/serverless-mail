@@ -720,7 +720,7 @@ Resources:
                   - s3:GetBucketLocation
                 Resource: 
                   - !GetAtt sesvdmBucket.Arn
-                  - !Sub {sesvdmBucket.Arn}/*
+                  - !Sub ${sesvdmBucket.Arn}/*
 
   CreateAthenaViewsTrigger:
     Type: AWS::CloudFormation::CustomResource
