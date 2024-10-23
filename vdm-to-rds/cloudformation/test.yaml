@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Components to automate VDM data collection for reports outside of
+  the AWS Console
+
+
+Resources:
+
+  ImportLatestVDMJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: New_importLatestVDM
+      Description: Import the latest VDM file into the RDS database
+      Role: !GetAtt GlueRole.Arn
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: glueCode/importLatestVDM.py
+      GlueVersion: "4.0"
+      DefaultArguments:
+        "--enable-auto-scaling": "true"
+        "--job-bookmark-option": "job-bookmark-disable"
+        "--bucketname": "sesvdm-rob-141257287127"
+        "--python-modules-installer-option": "--upgrade"
+      MaxRetries: 0
+      NumberOfWorkers: 4
+      WorkerType: G.1X
+
+
+  #IAM related resources. Policies and users
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: GlueRole-tester
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+      ManagedPolicyArns:
+      # FIXME This is far too open
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      

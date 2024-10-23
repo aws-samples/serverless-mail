@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Components to automate VDM data collection for reports outside of the
+  AWS Console
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.192.0.0/16
+  PrivateSubnet1CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet
+      in the first Availability Zone
+    Type: String
+    Default: 10.192.0.0/24
+  PrivateSubnet2CIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet
+      in the second Availability Zone
+    Type: String
+    Default: 10.192.1.0/24
+  VDMReportingDatabaseName:
+    Description: The name of the database to create to store the VDM output
+    Type: String
+    Default: VDMReporting
+Resources:
+  MasterBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${EnvironmentName}-${AWS::AccountId}
+  sesvdmBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: sesvdm-${AWS::AccountId}
+  sesdmarcemailparsed:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ses-dmarc-email-parsed-${AWS::AccountId}
+  sesdmarcemailjsondata:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ses-dmarc-email-json-data-${AWS::AccountId}
+  dmarcraw:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: dmarc-raw-${AWS::AccountId}
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      DatabaseInput:
+        Name:
+          Fn::Sub: ${EnvironmentName}_gdc
+      CatalogId:
+        Ref: AWS::AccountId
+  DMARCRawDataTable:
+    Type: AWS::Glue::Table
+    Properties:
+      DatabaseName:
+        Ref: GlueDatabase
+      CatalogId:
+        Ref: AWS::AccountId
+      TableInput:
+        StorageDescriptor:
+          Columns:
+          - Name: feedback
+            Type: struct<version:string,report_metadata:struct<org_name:string,email:string,extra_contact_info:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string>,record:struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<header_from:string,envelope_from:string>,auth_results:struct<dkim:struct<domain:string,selector:string,result:string>,spf:struct<domain:string,scope:string,result:string>>>>
+          Location:
+            Fn::Sub: s3://${sesdmarcemailjsondata}/raw/
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+        Name: dmarcrawdata
+  DMARCJsonDataTable:
+    Type: AWS::Glue::Table
+    Properties:
+      DatabaseName:
+        Ref: GlueDatabase
+      CatalogId:
+        Ref: AWS::AccountId
+      TableInput:
+        StorageDescriptor:
+          Columns:
+          - Name: feedback
+            Type: struct<version:string,report_metadata:struct<org_name:string,email:string,extra_contact_info:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string,fo:string>,record:struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<header_from:string,envelope_from:string>,auth_results:struct<dkim:struct<domain:string,selector:string,result:string>,spf:struct<domain:string,scope:string,result:string>>>>
+          Location:
+            Fn::Sub: s3://${sesdmarcemailjsondata}/raw/
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+        Name: dmarcjsondata
+  DMARCJsonEvaluatedDataTable:
+    Type: AWS::Glue::Table
+    Properties:
+      DatabaseName:
+        Ref: GlueDatabase
+      CatalogId:
+        Ref: AWS::AccountId
+      TableInput:
+        StorageDescriptor:
+          Columns:
+          - Name: feedback
+            Type: struct<version:string,report_metadata:struct<org_name:string,email:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string,fo:string>,record:array<struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<envelope_to:string,envelope_from:string,header_from:string>,auth_results:struct<dkim:array<struct<domain:string,selector:string,result:string>>,spf:struct<domain:string,scope:string,result:string>>>>>
+          Location:
+            Fn::Sub: s3://${sesdmarcemailjsondata}/raw/
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+        Name: dmarcjsonevaluateddata
+  CreateAthenaViewsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role:
+        Fn::GetAtt:
+        - CreateAthenaViewsFunctionExecutionRole
+        - Arn
+      Timeout: 60
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      CodeUri: s3://cf-templates-vzmxv9oxgajp-eu-west-2/e2f5b44349273f9f5445ce414e1d8833
+      Environment:
+        Variables:
+          account_number:
+            Ref: AWS::AccountId
+          database_name:
+            Ref: GlueDatabase
+          output_s3_bucket:
+            Ref: MasterBucket
+          glue_table_name:
+            Ref: DMARCJsonDataTable
+          glue_evaluated_table_name:
+            Ref: DMARCJsonEvaluatedDataTable
+  AWSLambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AWSLambdaBasicExecutionPolicy
+      Path: /service-role/
+      Description: ''
+      Groups: []
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Resource:
+            Fn::Sub: arn:aws:logs:*:${AWS::AccountId}:*
+          Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Effect: Allow
+      Users: []
+  CreateAthenaViewsFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+      - Ref: AWSLambdaBasicExecutionPolicy
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateViewAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: GlueAccess
+            Effect: Allow
+            Action:
+            - glue:GetTable
+            - glue:GetDatabases
+            - glue:CreateTable
+            Resource: '*'
+          - Sid: AthenaAccess
+            Effect: Allow
+            Action:
+            - athena:StartQueryExecution
+            - athena:GetQueryExecution
+            Resource: '*'
+          - Sid: S3ResponseAccess
+            Effect: Allow
+            Action:
+            - s3:ListMultipartUploadParts
+            - s3:PutObject
+            - s3:GetObject
+            - s3:AbortMultipartUpload
+            - s3:GetBucketLocation
+            Resource:
+            - Fn::GetAtt:
+              - MasterBucket
+              - Arn
+            - Fn::Sub: ${MasterBucket.Arn}/*
+  CreateAthenaViews:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CreateAthenaViewsFunction
+        - Arn

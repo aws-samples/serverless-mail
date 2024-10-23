@@ -1,0 +1,216 @@
+Return-Path: <jhbleeaws@gmail.com>
+Received: from mail-oa1-f45.google.com (mail-oa1-f45.google.com [209.85.160.45])
+ by inbound-smtp.us-east-1.amazonaws.com with SMTP id se4leeahr0h2v2k6s0edmup6s00r1f4ia4f8pcg1
+ for dmarc@mail.evaleah.people.aws.dev;
+ Wed, 07 Feb 2024 14:08:13 +0000 (UTC)
+X-SES-Spam-Verdict: PASS
+X-SES-Virus-Verdict: PASS
+Received-SPF: pass (spfCheck: domain of _spf.google.com designates 209.85.160.45 as permitted sender) client-ip=209.85.160.45; envelope-from=jhbleeaws@gmail.com; helo=mail-oa1-f45.google.com;
+Authentication-Results: amazonses.com;
+ spf=pass (spfCheck: domain of _spf.google.com designates 209.85.160.45 as permitted sender) client-ip=209.85.160.45; envelope-from=jhbleeaws@gmail.com; helo=mail-oa1-f45.google.com;
+ dkim=pass header.i=@gmail.com;
+ dmarc=pass header.from=gmail.com;
+X-SES-RECEIPT: AEFBQUFBQUFBQUFHRjIxWnlxakFLMmh3OUJoTEdOZnNDNGRkdXhQYWllTUJLZUNJU3pKaDlGelkvNnR3b0ZmcTlta25nRVZNV3ZFckRiNnVFV0tZeitVQ2FkS1JqQmVTTENPWlBzeE1WY3NVOVlBRElFWDRmMnVSWHpjOXdMV1YxUU9HSFlqbXVXOHVQVFBMYS9YTUtlalJxMHEyMmp6di9GZGZxbXo5TmxHRURMdVVFYnk5aXRZekZWMWhnb3dhSkExWVMxUHhWTmZ4cHlwSk1ZZkdJZXBSL3JtdWMzc01PNW0rV0RFbWY5Y3Q3NDVNcjRRUUpOV1g5SWVIcjNLRHBoT1NYZmxHQ0FsS1d5Mk9MUWhKY1M3ZjFGUkNReDlPREE5UVNSOVpqYUJWU1lsNXR3TE5iWVE9PQ==
+X-SES-DKIM-SIGNATURE: a=rsa-sha256; q=dns/txt; b=bycAMi+auTAB7+falwCQa9EvnIWFj8HR9jNNAAeJ6m1Bg2GiTpQ2oshtfjcSzMhKdPGQ9NppqdMisPSQUJRbyJBOhJs4Nv0a38EGuECDfxEm4Yq7B+n24C+sBCYXhj1tGVXwDlnxRc/sFDTVkpCi5vh/y4Zsp1pfWNHfCq+uCwQ=; c=relaxed/simple; s=224i4yxa5dv7c2xz3womw6peuasteono; d=amazonses.com; t=1707314894; v=1; bh=Lsmy+45A2zGb90nj1dEvgEy1p1KxE5FbpQI4n1bocDk=; h=From:To:Cc:Bcc:Subject:Date:Message-ID:MIME-Version:Content-Type:X-SES-RECEIPT;
+Received: by mail-oa1-f45.google.com with SMTP id 586e51a60fabf-2193ccbb885so339941fac.2
+        for <dmarc@mail.evaleah.people.aws.dev>; Wed, 07 Feb 2024 06:08:13 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1707314893; x=1707919693; darn=mail.evaleah.people.aws.dev;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=rX6n3ez20M9csvYKjr2CwUZzB8iU8AHy2kY+p8fz1sY=;
+        b=GZUUTQW71tZlr5+iFX+ptLY/DHOBTQNPRyw4Ah9VEvPelCkozJbMUce16jjHadvmOm
+         rRKTdLO15U0Dc6+9ITpcudCpr7Ninp535R87l17lLsKLtUxtQA/78t7hq1Nodnp6hqkj
+         N8zDTW4Q9qS6hWU0+gJl14BfPHhDPpGAxBCALHC+5HlohRWIw07P0E13c++933NGc4tK
+         tDmdHAwpEpJ3y95Qmh9TqYsVIUK2jvXL9JDSIT0X0lJftes/6htpX3GS1DK0cAYSfH2j
+         oJZ00mDgcteQVVEUh57RqrHwt8xowwxNDZQ7J+rz4yGGapcXzocww04biVmeJk4Ly8+U
+         PeJg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1707314893; x=1707919693;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=rX6n3ez20M9csvYKjr2CwUZzB8iU8AHy2kY+p8fz1sY=;
+        b=G6pwC7CCMYNyoK8zQDKhy57Qwq8QecjDR63kn7kxMgXmzu2nINxBTaPzsOe+fujF8/
+         w6WmaCsCNX7rIq9bZ9PdwsNLoIrDvcz46gMO+yeqQvf+ghS/Tuy8w5olESFYB/4Ol16J
+         J4wBRsxSprLj0QIBP7A39uWzmsBJqVXc3IAzgn7JP+BvGTIV+MXlMsboDpUauHLSviQZ
+         r0iliJDHqEoRBpEtOVSibNOI5Lfzpsvm+7dwD95Sg753o9LOeg2KtC+nsc3z40lMI3J9
+         lbnNI4eBNmu91MTMNVSuwid8wN3ANcSOWyDtTmea1SlBySum6cNV2FayUNBoF2ydSKXJ
+         wRdg==
+X-Gm-Message-State: AOJu0Yw9k5N+mUOmLnhz6XxUfs5NFxDjjTZWiASqTeM57lWBKzkoyGWw
+	ZGOWvpz/DUdMmtGDIJTatrh4GEfqZ9/h8Tq08lluDnaXaE3Z7/ccRrLBBW1HlN+JuCLks6KwxcB
+	tIOBlWxZN5qq+fQ6eV7SQkOKMX7AcrXdS
+X-Google-Smtp-Source: AGHT+IF1zI8l02BcgDfM0Rqi+u6MzgP1DDcqiSiezObK+meFxQo3OZ5KxldHRXO6T/ioJxgo+KTfZoy+bTc3alqFBqQ=
+X-Received: by 2002:a05:6871:6ac:b0:219:30b9:fc22 with SMTP id
+ l44-20020a05687106ac00b0021930b9fc22mr6809019oao.25.1707314892679; Wed, 07
+ Feb 2024 06:08:12 -0800 (PST)
+MIME-Version: 1.0
+References: <CAHwKQ7BzFdU3VbxjcPUyM3GOxy-Y9nKq3w30OU=QBYnYDXh5SQ@mail.gmail.com>
+ <CAHwKQ7BSNyGDR=FANF41G+bLi8E1PnhKzGO348RH9QvfhBecyg@mail.gmail.com>
+ <CAHwKQ7A8usxbzK1Lr-ccwBrqcbA0ns=Q4KFYeyQAudwE_x9Yug@mail.gmail.com>
+ <CAHwKQ7B-3xDnZE6+31UKLgrWtQhcaf4+YVcVL-5Rsk4i-CRJvg@mail.gmail.com>
+ <CAHwKQ7Dd_fNJO++SBcupfk+-QZQeYUipdvBOStSobnFKGutvOw@mail.gmail.com>
+ <CAHwKQ7DVwHxZoAfMvkNs-6--GNUxWMe7Dz3SpH8dfP16Tcv0Gg@mail.gmail.com>
+ <CAHwKQ7BG69oihCZ_39+3bTeymVXYdWiu6CSN7DirCSOj94dWdg@mail.gmail.com> <CAHwKQ7B9mA0za4KzsOJti21ypU7m2h+bkvyr4aKewx1U7FwGEQ@mail.gmail.com>
+In-Reply-To: <CAHwKQ7B9mA0za4KzsOJti21ypU7m2h+bkvyr4aKewx1U7FwGEQ@mail.gmail.com>
+From: JLEE AWS <jhbleeaws@gmail.com>
+Date: Wed, 7 Feb 2024 09:08:01 -0500
+Message-ID: <CAHwKQ7CKNDAboUkQDJSUR-WW03xnDSha4BaXSvsnig1aGKNS8Q@mail.gmail.com>
+Subject: Re:
+To: dmarc@mail.evaleah.people.aws.dev
+Content-Type: multipart/mixed; boundary="000000000000b2d7500610cb39e5"
+
+--000000000000b2d7500610cb39e5
+Content-Type: multipart/alternative; boundary="000000000000b2d74f0610cb39e3"
+
+--000000000000b2d74f0610cb39e3
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+On Fri, Jan 26, 2024 at 9:04=E2=80=AFAM JLEE AWS <jhbleeaws@gmail.com> wrot=
+e:
+
+>
+>
+> On Thu, Jan 25, 2024 at 2:38=E2=80=AFPM JLEE AWS <jhbleeaws@gmail.com> wr=
+ote:
+>
+>>
+>>
+>> On Thu, Jan 25, 2024 at 2:36=E2=80=AFPM JLEE AWS <jhbleeaws@gmail.com> w=
+rote:
+>>
+>>>
+>>>
+>>> ---------- Forwarded message ---------
+>>> From: JLEE AWS <jhbleeaws@gmail.com>
+>>> Date: Thu, Jan 25, 2024 at 1:37=E2=80=AFPM
+>>> Subject: Fwd:
+>>> To: <dmarc@mail.evaleah.people.aws.dev>
+>>>
+>>>
+>>>
+>>>
+>>> ---------- Forwarded message ---------
+>>> From: JLEE AWS <jhbleeaws@gmail.com>
+>>> Date: Thu, Jan 25, 2024 at 1:29=E2=80=AFPM
+>>> Subject: Fwd:
+>>> To: <dmarc@mail.evaleah.people.aws.dev>
+>>>
+>>>
+>>>
+>>>
+>>> ---------- Forwarded message ---------
+>>> From: JLEE AWS <jhbleeaws@gmail.com>
+>>> Date: Thu, Jan 25, 2024 at 1:26=E2=80=AFPM
+>>> Subject: Re:
+>>> To: <dmarc@mail.evaleah.people.aws.dev>
+>>>
+>>>
+>>>
+>>>
+>>> On Thu, Jan 25, 2024 at 1:26=E2=80=AFPM JLEE AWS <jhbleeaws@gmail.com> =
+wrote:
+>>>
+>>>>
+>>>>
+>>>> On Thu, Jan 25, 2024 at 9:44=E2=80=AFAM JLEE AWS <jhbleeaws@gmail.com>=
+ wrote:
+>>>>
+>>>>>
+>>>>>
+
+--000000000000b2d74f0610cb39e3
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><br></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" =
+class=3D"gmail_attr">On Fri, Jan 26, 2024 at 9:04=E2=80=AFAM JLEE AWS &lt;<=
+a href=3D"mailto:jhbleeaws@gmail.com">jhbleeaws@gmail.com</a>&gt; wrote:<br=
+></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;=
+border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir=3D"ltr"><=
+br></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_att=
+r">On Thu, Jan 25, 2024 at 2:38=E2=80=AFPM JLEE AWS &lt;<a href=3D"mailto:j=
+hbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt; wrote:<br=
+></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;=
+border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir=3D"ltr"><=
+br></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_att=
+r">On Thu, Jan 25, 2024 at 2:36=E2=80=AFPM JLEE AWS &lt;<a href=3D"mailto:j=
+hbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt; wrote:<br=
+></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;=
+border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir=3D"ltr"><=
+br><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">---=
+------- Forwarded message ---------<br>From: <strong class=3D"gmail_sendern=
+ame" dir=3D"auto">JLEE AWS</strong> <span dir=3D"auto">&lt;<a href=3D"mailt=
+o:jhbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt;</span>=
+<br>Date: Thu, Jan 25, 2024 at 1:37=E2=80=AFPM<br>Subject: Fwd:<br>To:  &lt=
+;<a href=3D"mailto:dmarc@mail.evaleah.people.aws.dev" target=3D"_blank">dma=
+rc@mail.evaleah.people.aws.dev</a>&gt;<br></div><br><br><div dir=3D"ltr"><b=
+r><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">----=
+------ Forwarded message ---------<br>From: <strong class=3D"gmail_senderna=
+me" dir=3D"auto">JLEE AWS</strong> <span dir=3D"auto">&lt;<a href=3D"mailto=
+:jhbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt;</span><=
+br>Date: Thu, Jan 25, 2024 at 1:29=E2=80=AFPM<br>Subject: Fwd:<br>To:  &lt;=
+<a href=3D"mailto:dmarc@mail.evaleah.people.aws.dev" target=3D"_blank">dmar=
+c@mail.evaleah.people.aws.dev</a>&gt;<br></div><br><br><div dir=3D"ltr"><br=
+><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">-----=
+----- Forwarded message ---------<br>From: <strong class=3D"gmail_sendernam=
+e" dir=3D"auto">JLEE AWS</strong> <span dir=3D"auto">&lt;<a href=3D"mailto:=
+jhbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt;</span><b=
+r>Date: Thu, Jan 25, 2024 at 1:26=E2=80=AFPM<br>Subject: Re:<br>To:  &lt;<a=
+ href=3D"mailto:dmarc@mail.evaleah.people.aws.dev" target=3D"_blank">dmarc@=
+mail.evaleah.people.aws.dev</a>&gt;<br></div><br><br><div dir=3D"ltr"><br><=
+/div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">O=
+n Thu, Jan 25, 2024 at 1:26=E2=80=AFPM JLEE AWS &lt;<a href=3D"mailto:jhble=
+eaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&gt; wrote:<br></d=
+iv><blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;bord=
+er-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir=3D"ltr"><div =
+dir=3D"ltr"><br></div><br><div class=3D"gmail_quote"><div dir=3D"ltr" class=
+=3D"gmail_attr">On Thu, Jan 25, 2024 at 9:44=E2=80=AFAM JLEE AWS &lt;<a hre=
+f=3D"mailto:jhbleeaws@gmail.com" target=3D"_blank">jhbleeaws@gmail.com</a>&=
+gt; wrote:<br></div><blockquote class=3D"gmail_quote" style=3D"margin:0px 0=
+px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div =
+dir=3D"ltr"><br></div>
+</blockquote></div></div>
+</blockquote></div>
+</div></div>
+</div></div>
+</div></div>
+</blockquote></div>
+</blockquote></div>
+</blockquote></div>
+
+--000000000000b2d74f0610cb39e3--
+--000000000000b2d7500610cb39e5
+Content-Type: text/xml; charset="US-ASCII"; name="mail.evaleah.people.aws.dev-1706727608.xml"
+Content-Disposition: attachment; 
+	filename="mail.evaleah.people.aws.dev-1706727608.xml"
+Content-Transfer-Encoding: base64
+Content-ID: <f_lsbv759h0>
+X-Attachment-Id: f_lsbv759h0
+
+PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiID8+CjxmZWVkYmFjaz4KICA8dmVy
+c2lvbj4xLjA8L3ZlcnNpb24+CiAgPHJlcG9ydF9tZXRhZGF0YT4KICAgIDxvcmdfbmFtZT5FdmFs
+ZWFoPC9vcmdfbmFtZT4KICAgIDxlbWFpbD5NQUlMRVItREFFTU9OQG1haWxnYXRlMjExLmlzcC5i
+ZWxnYWNvbS5iZTwvZW1haWw+CiAgICA8ZXh0cmFfY29udGFjdF9pbmZvPjwvZXh0cmFfY29udGFj
+dF9pbmZvPgogICAgPHJlcG9ydF9pZD45MDA5MTQkOGVjZTI3Mj1mZDljYjg5ZWI3MTlhNjUzQHBy
+b3hpbXVzLmJlPC9yZXBvcnRfaWQ+CiAgICA8ZGF0ZV9yYW5nZT4KICAgICAgPGJlZ2luPjE3MDY2
+NDEyMDg8L2JlZ2luPgogICAgICA8ZW5kPjE3MDY3Mjc2MDg8L2VuZD4KICAgIDwvZGF0ZV9yYW5n
+ZT4KICA8L3JlcG9ydF9tZXRhZGF0YT4KICA8cG9saWN5X3B1Ymxpc2hlZD4KICAgIDxkb21haW4+
+bWFpbC5ldmFsZWFoLnBlb3BsZS5hd3MuZGV2PC9kb21haW4+CiAgICA8YWRraW0+cjwvYWRraW0+
+CiAgICA8YXNwZj5yPC9hc3BmPgogICAgPHA+bm9uZTwvcD4KICAgIDxzcD48L3NwPgogICAgPHBj
+dD4xMDA8L3BjdD4KICA8L3BvbGljeV9wdWJsaXNoZWQ+CiAgPHJlY29yZD4KICAgIDxyb3c+CiAg
+ICAgIDxzb3VyY2VfaXA+MjMuMjUxLjIyNi45MDwvc291cmNlX2lwPgogICAgICA8Y291bnQ+MTwv
+Y291bnQ+CiAgICAgIDxwb2xpY3lfZXZhbHVhdGVkPgogICAgICAgIDxkaXNwb3NpdGlvbj5ub25l
+PC9kaXNwb3NpdGlvbj4KICAgICAgICA8ZGtpbT5wYXNzPC9ka2ltPgogICAgICAgIDxzcGY+cGFz
+czwvc3BmPgogICAgICA8L3BvbGljeV9ldmFsdWF0ZWQ+CiAgICA8L3Jvdz4KICAgIDxpZGVudGlm
+aWVycz4KICAgICAgPGhlYWRlcl9mcm9tPm1haWwuZXZhbGVhaC5wZW9wbGUuYXdzLmRldjwvaGVh
+ZGVyX2Zyb20+CiAgICAgIDxlbnZlbG9wZV9mcm9tPmJvdW5jZS11cy1lYXN0LTEubWFpbC5ldmFs
+ZWFoLnBlb3BsZS5hd3MuZGV2PC9lbnZlbG9wZV9mcm9tPgogICAgPC9pZGVudGlmaWVycz4KICAg
+IDxhdXRoX3Jlc3VsdHM+CiAgICAgIDxka2ltPgogICAgICAgIDxkb21haW4+bWFpbC5ldmFsZWFo
+LnBlb3BsZS5hd3MuZGV2PC9kb21haW4+CiAgICAgICAgPHNlbGVjdG9yPm1hZWRtcGthcWZ0NHoy
+d2hvdXp0NHNqM3Fwb3loa3ppPC9zZWxlY3Rvcj4KICAgICAgICA8cmVzdWx0PnBhc3M8L3Jlc3Vs
+dD4KICAgICAgPC9ka2ltPgogICAgICA8c3BmPgogICAgICAgIDxkb21haW4+Ym91bmNlLXVzLWVh
+c3QtMS5tYWlsLmV2YWxlYWgucGVvcGxlLmF3cy5kZXY8L2RvbWFpbj4KICAgICAgICA8c2NvcGU+
+bWZyb208L3Njb3BlPgogICAgICAgIDxyZXN1bHQ+cGFzczwvcmVzdWx0PgogICAgICA8L3NwZj4K
+ICAgIDwvYXV0aF9yZXN1bHRzPgogIDwvcmVjb3JkPgo8L2ZlZWRiYWNrPg==
+--000000000000b2d7500610cb39e5--

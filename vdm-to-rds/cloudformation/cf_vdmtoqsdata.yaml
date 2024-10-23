@@ -1,194 +1,94 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: Components to automate VDM data collection for reports outside of
   the AWS Console
 
 Parameters:
   EnvironmentName:
-    Description: An environment name that is prefixed to resource names
+    Description: An environment name that is suffixed to resource names
     Type: String
-
-  DBPassword:
-    Description: Password for the MySQL database
-    Type: String
-    NoEcho: true
 
   VpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
-    Default: 10.192.0.0/16
-
-  PublicSubnet1CIDR:
-    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
-    Type: String
-    Default: 10.192.10.0/24
-
-  PublicSubnet2CIDR:
-    Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
-    Type: String
-    Default: 10.192.11.0/24
+    Default: 10.0.0.0/16
 
   PrivateSubnet1CIDR:
     Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
     Type: String
-    Default: 10.192.20.0/24
+    Default: 10.0.0.0/24
 
   PrivateSubnet2CIDR:
     Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
     Type: String
-    Default: 10.192.21.0/24
+    Default: 10.0.1.0/24
+
+  VDMReportingDatabaseName:
+    Description: The name of the database to create to store the VDM output
+    Type: String
+    Default: VDMReporting
 
 Resources:
-
   # S3 Buckets
+  # We shouldn't need the master bucket
   MasterBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${EnvironmentName}-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true  
-  
+      BucketName: !Sub master-${EnvironmentName}-${AWS::AccountId}
+
   sesvdmBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub sesvdm-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+      BucketName: !Sub sesvdm-${EnvironmentName}-${AWS::AccountId}
   
   sesdmarcemailparsed:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ses-dmarc-email-parsed-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-  
+      BucketName: !Sub ses-dmarc-email-parsed-${EnvironmentName}-${AWS::AccountId}
+
   sesdmarcemailjsondata:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ses-dmarc-email-json-data-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+      BucketName: !Sub ses-dmarc-email-json-data-${EnvironmentName}-${AWS::AccountId}
   
   dmarcraw:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub dmarc-raw-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+      BucketName: !Sub dmarc-raw-${EnvironmentName}-${AWS::AccountId}
   
-  sesdmarcemailreceived:
+  EmailReceivedBucket:
     Type: AWS::S3::Bucket
-    DependsOn: LambdaInvokePermission
+    DependsOn: EmailReceivedInvokePermission
     Properties:
-      BucketName: !Sub ses-dmarc-email-received-${AWS::AccountId}
-      Tags:
-        - Key: project
-          Value: !Sub ${EnvironmentName}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-            BucketKeyEnabled: true
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: BucketOwnerEnforced
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+      BucketName: !Sub ses-dmarc-email-received-${EnvironmentName}-${AWS::AccountId}
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
-            Function: !GetAtt FunctionDmarc.Arn
-  
-  LambdaInvokePermission:
+            Function: !GetAtt EmailReceivedFunction.Arn
+
+  EmailReceivedInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt FunctionDmarc.Arn
+      FunctionName: !GetAtt EmailReceivedFunction.Arn
       Action: 'lambda:InvokeFunction'
       Principal: 's3.amazonaws.com'
-      SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub arn:aws:s3:::ses-dmarc-email-received-${AWS::AccountId}
+      SourceArn: !Sub arn:aws:s3:::ses-dmarc-email-received-${EnvironmentName}-${AWS::AccountId}
 
   #IAM related resources. Policies and users
-  AWSGlueServiceRole:
+  GlueRole:
     Type: AWS::IAM::Role
     Properties:
       Path: /
-      RoleName: !Sub ${EnvironmentName}_AWSGlueServiceRole
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"glue.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-      MaxSessionDuration: 3600
+      RoleName: !Sub GlueRole-${EnvironmentName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
       ManagedPolicyArns:
+      # FIXME This is far too open
         - arn:aws:iam::aws:policy/AmazonRDSFullAccess
         - arn:aws:iam::aws:policy/SecretsManagerReadWrite
         - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
@@ -200,153 +100,21 @@ Resources:
         - Key: project
           Value: !Sub ${EnvironmentName}
 
-  AWSLambdaVPCAccessExecutionPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: AWSLambdaVPCAccessExecutionPolicy
-      Path: /service-role/
-      Description: ''
-      Groups: []
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Resource: '*'
-            Action:
-              - ec2:CreateNetworkInterface
-              - ec2:DeleteNetworkInterface
-              - ec2:DescribeNetworkInterfaces
-            Effect: Allow
-      Users: []
-
-  AWSLambdaBasicExecutionPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: AWSLambdaBasicExecutionPolicy
-      Path: /service-role/
-      Description: ''
-      Groups: []
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Resource: !Sub arn:aws:logs:*:${AWS::AccountId}:*
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Effect: Allow
-      Users: []
-
-  AWSLambdaVDMFilePolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: AWSLambdaVDMFilePolicy
-      Path: /service-role/
-      Description: ''
-      Groups: []
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Resource: 
-            - !GetAtt MasterBucket.Arn
-            - !Join ['/', [!GetAtt MasterBucket.Arn, '*']]
-            - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!GetAtt sesvdmBucket.Arn, '*']]
-            - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!GetAtt sesdmarcemailparsed.Arn, '*']]
-            - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!GetAtt sesdmarcemailjsondata.Arn, '*']]
-            - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!GetAtt dmarcraw.Arn, '*']]
-            - !GetAtt sesvdmBucket.Arn
-            - !Join ['/', [!Sub 'arn:aws:s3:::ses-dmarc-email-received-${AWS::AccountId}', '*']]
-            Action:
-                - s3-object-lambda:*
-                - s3:*
-            Effect: Allow
-      Users: []
-
-  LambdaVDMExecRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /service-role/
-      ManagedPolicyArns:
-        - !Ref AWSLambdaBasicExecutionPolicy
-        - !Ref AWSLambdaVPCAccessExecutionPolicy
-        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
-      MaxSessionDuration: 3600
-      RoleName: LambdaVDMExecRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-
-  CodeWhispererGrant:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument: |
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Sid": "CodeWhispererPermissions",
-                    "Effect": "Allow",
-                    "Action": [
-                        "codewhisperer:GenerateRecommendations"
-                    ],
-                    "Resource": "*"
-                }
-            ]
-        }
-      Roles:
-        - !Ref AWSGlueServiceRole
-      PolicyName: !Sub ${EnvironmentName}_CodeWhispererGrant
-
-  LakeFormationGrant:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument: |
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Sid": "LakeFormationDataAccess",
-                    "Effect": "Allow",
-                    "Action": [
-                        "lakeformation:GetDataAccess"
-                    ],
-                    "Resource": "*"
-                }
-            ]
-        }
-      Roles:
-        - !Ref AWSGlueServiceRole
-      PolicyName: !Sub ${EnvironmentName}_LakeFormationReadWrite
-
   AWSQuickSightRDSPolicy:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
-      ManagedPolicyName: "AWSQuickSightRDSPolicy"
-      Path: "/service-role/"
       Description: "Grants Amazon QuickSight describe permissions to AWS RDS resources"
-      Groups: []
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
         - Resource: "*"
-          Action:
-          - "rds:Describe*"
+          Action: rds:Describe*
           Effect: "Allow"
   
   AWSQuickSightS3Policy:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
-      ManagedPolicyName: "AWSQuickSightS3Policy"
-      Path: "/service-role/"
       Description: "Grants Amazon QuickSight read permission to Amazon S3 resources"
-      Groups: []
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -372,10 +140,7 @@ Resources:
   AWSQuickSightIAMPolicy:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
-      ManagedPolicyName: "AWSQuickSightIAMPolicy"
-      Path: "/service-role/"
       Description: "Grants Amazon QuickSight list permissions to AWS IAM resources"
-      Groups: []
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -384,17 +149,15 @@ Resources:
           - "iam:List*"
           Effect: "Allow"
 
-  QSServiceRole:
+  QuickSightRole:
     Type: "AWS::IAM::Role"
     Properties:
-      Path: "/service-role/"
       ManagedPolicyArns:
       - Ref: AWSQuickSightS3Policy
       - Ref: AWSQuickSightRDSPolicy
       - "arn:aws:iam::aws:policy/service-role/AWSQuicksightAthenaAccess"
       - Ref: AWSQuickSightIAMPolicy
       MaxSessionDuration: 3600
-      RoleName: !Sub "${EnvironmentName}-quicksight-service-role"
       Policies:
       - PolicyDocument:
           Version: "2012-10-17"
@@ -409,6 +172,11 @@ Resources:
             - "ec2:describeSubnets"
             - "ec2:describeVpcs"
             - "ec2:describeSecurityGroups"
+            - "ec2:CreateNetworkInterface"
+            - "ec2:ModifyNetworkInterfaceAttribute"
+            - "ec2:DeleteNetworkInterface"
+            - "ec2:DescribeSubnets"
+            - "ec2:DescribeSecurityGroups"
             Effect: "Allow"
             Sid: "Statement1"
         PolicyName: "QSVPCConn"
@@ -420,25 +188,88 @@ Resources:
           Principal:
             Service: "quicksight.amazonaws.com"
 
-  # Database  
-  DBInstance:
-    Type: AWS::RDS::DBInstance
-    DeletionPolicy: Retain
+  VDMReportingDatabaseAdminSecret:
+    Type: 'AWS::SecretsManager::Secret'
     Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} 
-      DBName: sesvdm
+      Name: !Sub VDMDBSecret-${EnvironmentName}
+      Description: "The administrative username and password for the VDM Database."
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: "password"
+        PasswordLength: 25
+        ExcludeCharacters: '"@/\'
+
+  # Database  
+  VDMReportingDatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    DependsOn: VDMReportingDatabaseAdminSecret
+    Properties:
+      DBName: !Ref VDMReportingDatabaseName
       Engine: mysql
       MasterUsername: admin
-      MasterUserPassword: !Ref DBPassword
+      MasterUserPassword: !Sub 
+        - "{{resolve:secretsmanager:VDMDBSecret-${EnvironmentName}:SecretString:password}}"
+        - EnvironmentName: !Ref EnvironmentName
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 5
       PubliclyAccessible: false 
       DeletionProtection: false
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups: 
-        - !Ref RDSSecurityGroup
+        - !Ref VDMReportingDatabaseSecurityGroup
+
+  VDMReportingDatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      SecurityGroupEgress:
+        - CidrIp: 127.0.0.1/32
+          IpProtocol: "-1"
+      VpcId: !Ref VPC
+      GroupDescription: Security Group protecting the VDM Reporting Database
+      Tags:
+      - Key: Name
+        Value: !Sub VDMReportingDatabaseSecurityGroup-${EnvironmentName}
+
+  CreateDatabaseTablesFunctionSecurityGroupIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      SourceSecurityGroupId: !GetAtt CreateDatabaseTablesFunctionSecurityGroup.GroupId
+      ToPort: 3306
+      FromPort: 3306
+      GroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
+
+  GlueDatabaseSecurityGroupIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      SourceSecurityGroupId: !GetAtt GlueSecurityGroup.GroupId
+      ToPort: 3306
+      FromPort: 3306
+      GroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
+
+  GlueSelfSecurityGroupIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: -1
+      SourceSecurityGroupId: !GetAtt GlueSecurityGroup.GroupId
+      GroupId: !GetAtt GlueSecurityGroup.GroupId
+
+  GlueSelfSecurityGroupEgressRule:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      IpProtocol: -1
+      DestinationSecurityGroupId: !GetAtt GlueSecurityGroup.GroupId
+      GroupId: !GetAtt GlueSecurityGroup.GroupId
+
+  QuickSightVPCConnectionIngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId: !GetAtt QuickSightVPCConnectionSecurityGroup.GroupId
+      GroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
 
   # Glue assests for VDM data collection
   ImportLatestVDMJob:
@@ -446,19 +277,18 @@ Resources:
     Properties:
       Name: !Sub ${EnvironmentName}_importLatestVDM
       Description: Import the latest VDM file into the RDS database
-      Role: !GetAtt AWSGlueServiceRole.Arn
+      Role: !GetAtt GlueRole.Arn
       Command:
         Name: glueetl
         PythonVersion: 3
-        ScriptLocation: !Sub s3://${MasterBucket}/packages/importLatestVDM.py
+        ScriptLocation: glueCode/importLatestVDM.py
       GlueVersion: "4.0"
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
         "--bucketname": !Sub ${sesvdmBucket}
-        "--additional-python-modules": !Sub s3://${MasterBucket}/packages/boto3-1.28.83-py3-none-any.whl,boto3==1.28.83
-        "--extra-py-files": !Sub s3://${MasterBucket}/packages/awscli-1.29.83-py3-none-any.whl
-        "--python-modules-installer-option": "update"
+        "--python-modules-installer-option": "--upgrade"
+        "--additional-python-modules": "boto3=1.28.23"
       MaxRetries: 0
       NumberOfWorkers: 4
       WorkerType: G.1X
@@ -466,25 +296,25 @@ Resources:
   VDMtoRDSJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: !Sub ${EnvironmentName}_vdmtords
+      Name: !Sub vdmtords-${EnvironmentName}
       Description: Collect VDM data and send to RDS
-      Role: !GetAtt AWSGlueServiceRole.Arn
+      Role: !GetAtt GlueRole.Arn
       Command:
         Name: glueetl
         PythonVersion: 3
-        ScriptLocation: !Sub s3://${MasterBucket}/packages/metricstoMySQL.py
+        ScriptLocation: glueCode/metricstoMySQL.py
       GlueVersion: "4.0"
       DefaultArguments:
         "--enable-auto-scaling": "true"
         "--job-bookmark-option": "job-bookmark-disable"
         "--bucketname": !Ref sesvdmBucket
-        "--mysqlconn": !Ref GlueMySQLConnection
+        "--mysqlconn": !Ref GlueDatabaseConnection
       MaxRetries: 0
       NumberOfWorkers: 4
       WorkerType: G.1X
       Connections:
         Connections:
-          - !Ref GlueMySQLConnection
+          - !Ref GlueDatabaseConnection
 
   GlueDatabase:
     Type: "AWS::Glue::Database"
@@ -493,84 +323,72 @@ Resources:
             Name: !Sub "${EnvironmentName}_gdc"
         CatalogId: !Ref "AWS::AccountId"  
 
-  dmarcrawgt:
-        Type: "AWS::Glue::Table"
-        Properties:
-            DatabaseName: !Ref GlueDatabase
-            CatalogId: !Ref "AWS::AccountId"
-            TableInput: 
-                Owner: "owner"
-                TableType: "EXTERNAL_TABLE"
-                Parameters: 
-                    sizeKey: "6968"
-                    objectCount: "18"
-                    UPDATED_BY_CRAWLER: "dmarc_reports2"
-                    CrawlerSchemaSerializerVersion: "1.0"
-                    recordCount: "8"
-                    averageRecordSize: "871"
-                    exclusions: !Sub "[\"s3://${sesdmarcemailjsondata}/raw//Unsaved/**\"]"
-                    CrawlerSchemaDeserializerVersion: "1.0"
-                    compressionType: "none"
-                    classification: "json"
-                    typeOfData: "file"
-                StorageDescriptor: 
-                    Columns: 
-                      - 
-                        Name: "feedback"
-                        Type: "struct<version:string,report_metadata:struct<org_name:string,email:string,extra_contact_info:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string>,record:struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<header_from:string,envelope_from:string>,auth_results:struct<dkim:struct<domain:string,selector:string,result:string>,spf:struct<domain:string,scope:string,result:string>>>>"
-                    Location: !Sub "s3://${sesdmarcemailjsondata}/raw/"
-                    InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
-                    OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
-                    Compressed: false
-                    NumberOfBuckets: -1
-                    SerdeInfo: 
-                        SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
-                        Parameters: 
-                            paths: "feedback"
-                    Parameters: 
-                        CrawlerSchemaDeserializerVersion: "1.0"
-                        compressionType: "none"
-                        classification: "json"
-                        typeOfData: "file"
-                    StoredAsSubDirectories: false
-                Name: "raw"
+  DMARCJsonDataTable:
+    Type: "AWS::Glue::Table"
+    Properties:
+        DatabaseName: !Ref GlueDatabase
+        CatalogId: !Ref "AWS::AccountId"
+        TableInput: 
+            StorageDescriptor: 
+                Columns: 
+                  - Name: "feedback"
+                    Type: "struct<version:string,report_metadata:struct<org_name:string,email:string,extra_contact_info:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string,fo:string>,record:struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<header_from:string,envelope_from:string>,auth_results:struct<dkim:struct<domain:string,selector:string,result:string>,spf:struct<domain:string,scope:string,result:string>>>>"
+                Location: !Sub "s3://${sesdmarcemailjsondata}/raw/"
+                InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+                OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+            Name: "dmarcjsondata"
 
-  DmarcRawCrawler:
-        Type: "AWS::Glue::Crawler"
-        DependsOn: dmarcrawgt
-        Properties:
-            Name: "dmarc_reports2"
-            Role: !Ref AWSGlueServiceRole
-            Targets: 
-                S3Targets: 
-                  - 
-                    Path: !Sub "s3://${sesdmarcemailjsondata}/raw/"
-                    Exclusions: 
-                      - "/Unsaved/**"
-            DatabaseName: !Ref GlueDatabase
-            SchemaChangePolicy: 
-                UpdateBehavior: "LOG"
-                DeleteBehavior: "LOG"
-            Schedule: 
-                ScheduleExpression: "cron(30 9 * * ? *)"
-            Configuration: "{\"Version\":1.0,\"CreatePartitionIndex\":true}"
+  DMARCJsonEvaluatedDataTable:
+    Type: "AWS::Glue::Table"
+    Properties:
+        DatabaseName: !Ref GlueDatabase
+        CatalogId: !Ref "AWS::AccountId"
+        TableInput: 
+            StorageDescriptor: 
+                Columns: 
+                  - Name: "feedback"
+                    Type: "struct<version:string,report_metadata:struct<org_name:string,email:string,report_id:string,date_range:struct<begin:string,end:string>>,policy_published:struct<domain:string,adkim:string,aspf:string,p:string,sp:string,pct:string,fo:string>,record:array<struct<row:struct<source_ip:string,count:string,policy_evaluated:struct<disposition:string,dkim:string,spf:string>>,identifiers:struct<envelope_to:string,envelope_from:string,header_from:string>,auth_results:struct<dkim:array<struct<domain:string,selector:string,result:string>>,spf:struct<domain:string,scope:string,result:string>>>>>"
+                Location: !Sub "s3://${sesdmarcemailjsondata}/raw/"
+                InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+                OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+            Name: "dmarcjsonevaluateddata"
 
-  GlueMySQLConnection:
+
+  GlueDatabaseConnection:
     Type: AWS::Glue::Connection
     Properties:
       CatalogId: !Ref AWS::AccountId
       ConnectionInput:
-        Name: !Sub ${EnvironmentName}-sesvdm-connection
+        Name: !Sub ${VDMReportingDatabaseName}-connection-${EnvironmentName}
         ConnectionType: JDBC
         ConnectionProperties:
-          JDBC_CONNECTION_URL: !Sub "jdbc:mysql://${DBInstance.Endpoint.Address}:3306/sesvdm"
+          JDBC_CONNECTION_URL: !Sub "jdbc:mysql://${VDMReportingDatabaseInstance.Endpoint.Address}:3306/${VDMReportingDatabaseName}"
           USERNAME: admin
-          PASSWORD: !Ref DBPassword
+          PASSWORD: !Sub
+            - "{{resolve:secretsmanager:VDMDBSecret-${EnvironmentName}:SecretString:password}}"
+            - EnvironmentName: !Ref EnvironmentName
         PhysicalConnectionRequirements:
           AvailabilityZone: !Select [0, !GetAZs ""]
           SecurityGroupIdList:
-            - !Ref RDSSecurityGroup
+            - !Ref GlueSecurityGroup
           SubnetId: !Ref PrivateSubnet1
+
+  GlueSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group allowing Glue to connect to the VDM Reporting Database
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        DestinationSecurityGroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
+        ToPort: 3306
+        FromPort: 3306
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: GlueSecurityGroup-${EnvironmentName}
+
 
   GlueVDMWorkflow:
       Type: "AWS::Glue::Workflow"
@@ -615,46 +433,9 @@ Resources:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCIDR
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName}_VPC
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}_IGW
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      CidrBlock: !Ref PublicSubnet1CIDR
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
-
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
-      CidrBlock: !Ref PublicSubnet2CIDR
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+          Value: !Sub VPC_${EnvironmentName}
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
@@ -665,7 +446,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+          Value: !Sub Private Subnet (AZ1) for ${EnvironmentName}
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -676,7 +457,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
+          Value: !Sub Private Subnet (AZ2) for ${EnvironmentName}
 
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -686,237 +467,37 @@ Resources:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
 
-  PublicRouteTable:
+  PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${EnvironmentName} Public Routes
+          Value: !Sub ${EnvironmentName} Private Routes 
 
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnet1RouteTableAssociation:
+  PrivateRouteTableAssociation1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
-
-
-  PrivateRouteTable1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
-
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
+      RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet1
 
-  PrivateRouteTable2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} Private Routes (AZ2)
-
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PrivateSubnet2RouteTableAssociation:
+  PrivateRouteTableAssociation2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref PrivateRouteTable2
+      RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet2
-      
-  RDSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow Glue connection          
-      SecurityGroupIngress:
-      - IpProtocol: "tcp"
-        FromPort: 0
-        SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
-        ToPort: 65535
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "-1"
-        FromPort: -1
-        ToPort: -1
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "tcp"
-        FromPort: 22
-        ToPort: 22
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "tcp"
-        FromPort: 443
-        ToPort: 443
-      SecurityGroupEgress:
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "tcp"
-        FromPort: 0
-        ToPort: 65535
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "-1"
-        FromPort: -1
-        ToPort: -1  
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}_RDSSecurityGroup
-      
-  LambdaSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow Lambda to RDS connection    
-      SecurityGroupEgress:
-      - IpProtocol: "tcp"
-        FromPort: 3306
-        ToPort: 3306
-        DestinationSecurityGroupId: !GetAtt RDSSecurityGroup.GroupId
-      - IpProtocol: "tcp"
-        FromPort: 443
-        ToPort: 443
-        CidrIp: 0.0.0.0/0
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}_LambdaSecurityGroup
 
-  RDSLambdaIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref RDSSecurityGroup
-      SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
-      IpProtocol: tcp  
-      FromPort: 3306
-      ToPort: 3306
-
-  # Endpoints
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
-      VpcId: !Ref VPC  # Reference to your VPC
+      VpcId: !Ref VPC
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
       RouteTableIds:
-        - !Ref PrivateRouteTable1  # Reference to your private route table
-        - !Ref PublicRouteTable   # Reference to your public route table
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal: '*'
-            Action: '*'
-            Resource: '*'
+        - !Ref PrivateRouteTable
       VpcEndpointType: Gateway
 
-  # Secret to be able to retrieve the password entered  
-  RDSSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub ${EnvironmentName}_rds_password
-      Description: 'Password entered when you deployed the stack'
-      SecretString:
-        !Sub |
-          {
-            "username": "admin",
-            "password": "${DBPassword}"
-          }
-
-  # Lambda
-  DownloadFiles:
-    Type: AWS::Lambda::Function
-    Properties:
-      Role: !GetAtt LambdaVDMExecRole.Arn
-      Timeout: 30
-      Runtime: python3.9
-      FunctionName: downloadvdmqsfiles
-      Handler: index.lambda_handler
-      Code:
-        ZipFile: |
-          import boto3
-          import urllib.request
-          import cfnresponse  
-          import time   
-          from datetime import date, timedelta, datetime     
-
-          def download_file(url,filename,bucketname):
-              s3 = boto3.client("s3")
-              response = urllib.request.urlopen(url)
-              file_content = response.read()
-              s3.put_object(Bucket=bucketname, Key=filename, Body=file_content)
-
-          def lambda_handler(event, context):                
-              try:
-                  bucket = event['ResourceProperties']['bucketname']
-                  sesvdmbucket = event['ResourceProperties']['sesvdmbucket']
-                  status = cfnresponse.SUCCESS
-                  err='worked'
-                  
-                  # download awscli file
-                  download_file(url='https://files.pythonhosted.org/packages/e2/3c/af9e6679c3743ded4feafd17a615215ac4dfe0e5255f3c6adae7f294ab81/awscli-1.29.83-py3-none-any.whl',filename='packages/awscli-1.29.83-py3-none-any.whl',bucketname=bucket)
-                  # download updated boto3 file
-                  download_file(url='https://files.pythonhosted.org/packages/93/66/67cea8fd669c359af04502d5bdf00aa0bfe3918ee64280590a9c9f238c1f/boto3-1.28.83-py3-none-any.whl',filename='packages/boto3-1.28.83-py3-none-any.whl',bucketname=bucket)
-                  # download metricstoMySQL.py for Glue Job
-                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/metricstoMySQL.py?raw=True',filename='packages/metricstoMySQL.py',bucketname=bucket)
-                  # download importLatestVDM.py for Glue Job
-                  download_file(url='https://github.com/aws-samples/serverless-mail/blob/main/vdm-to-rds/importLatestVDM.py?raw=True',filename='packages/importLatestVDM.py',bucketname=bucket)
-                  # download xmldict
-                  download_file(url='https://github.com/aws-samples/serverless-mail/raw/main/lambda-email-parser/ses-dmarc-email-parser.zip', filename='packages/ses-dmarc-email-parser.zip',bucketname=bucket)
-                  # download createtables scripts
-                  download_file(url='https://github.com/aws-samples/serverless-mail/raw/main/vdm-to-rds/createsesvdmtables/createsesvdmtables.zip', filename='packages/createsesvdmtables.zip',bucketname=bucket)
-                  # create starting lastvdmdate.csv file
-                  EndDate = date.today()
-                  s3b = boto3.client("s3")
-                  s3b.put_object(Bucket=sesvdmbucket, Key='lastvdmdate.csv', Body=(EndDate+ timedelta(days=-7)).isoformat())
-              except Exception as e:
-                  err = repr(e)
-                  status = cfnresponse.FAILED
-
-              # returning status so CloudFormation execution receives the right signals
-              returneddata = {'err':err}
-              cfnresponse.send(event, context, status, returneddata)
-
-  InvokeDownloadFiles:
-    Type: AWS::CloudFormation::CustomResource
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Version: '1.0'
-    Properties:
-      ServiceToken: !GetAtt DownloadFiles.Arn
-      bucketname: !Ref MasterBucket
-      sesvdmbucket: !Ref sesvdmBucket
-
-  FunctionDmarc:
-    Type: AWS::Lambda::Function
-    DependsOn: InvokeDownloadFiles
+  EmailReceivedFunction:
+    Type: AWS::Serverless::Function
     Properties:
       Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 300
@@ -931,75 +512,248 @@ Resources:
           source_bucket: !Sub ses-dmarc-email-received-${AWS::AccountId}
           modify_workmail_message: 'false'
           select_headers: ALL
-      Code:
-        S3Bucket: !Ref MasterBucket
-        S3Key: 'packages/ses-dmarc-email-parser.zip' 
+      CodeUri: ../../lambda-email-parser
 
-  FunctionCreateTables:
-    Type: AWS::Lambda::Function
-    DependsOn: InvokeDownloadFiles
+  LambdaVDMExecRole:
+    Type: AWS::IAM::Role
     Properties:
-      Role: !GetAtt LambdaVDMExecRole.Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com 
+
+  CreateDatabaseTablesFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: 
+      - S3Endpoint
+      - PrivateRouteTable
+      - PrivateRouteTableAssociation1
+      - PrivateRouteTableAssociation2
+    Properties:
+      Role: !GetAtt CreateDatabaseTablesFunctionExecutionRole.Arn
       Timeout: 90
       Runtime: python3.9
-      FunctionName: createsesvdmtables
       Handler: lambda_function.lambda_handler
+      CodeUri: createVDMTables/
       VpcConfig:
         SecurityGroupIds: 
-          - !Ref LambdaSecurityGroup
+          - !Ref CreateDatabaseTablesFunctionSecurityGroup
         SubnetIds: 
           - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
       Environment:
         Variables:
-          db_name: "sesvdm"
-          dbpassword: !Ref DBPassword
+          db_name: !Ref VDMReportingDatabaseName
+          dbpassword: !Sub 
+            - "{{resolve:secretsmanager:VDMDBSecret-${EnvironmentName}:SecretString:password}}"
+            - EnvironmentName: !Ref EnvironmentName
           dbuser: "admin"
-          mysql_host: !GetAtt DBInstance.Endpoint.Address
-      Code:
-        S3Bucket: !Ref MasterBucket
-        S3Key: 'packages/createsesvdmtables.zip'
+          mysql_host: !GetAtt VDMReportingDatabaseInstance.Endpoint.Address
+  
+  CreateDatabaseTablesFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
 
-  InvokeCreateTables:
+  CreateDatabaseTablesFunctionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Lambda to connect to the database to create the tables
+      SecurityGroupEgress:
+      - IpProtocol: "tcp"
+        FromPort: 3306
+        ToPort: 3306
+        DestinationSecurityGroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
+      - IpProtocol: "tcp"
+        FromPort: 443
+        ToPort: 443
+        CidrIp: "0.0.0.0/0"
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub CreateDatabaseTablesSecurityGroup_${EnvironmentName}
+
+  CreateDatabaseTablesTrigger:
     Type: AWS::CloudFormation::CustomResource
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
     Version: '1.0'
     Properties:
-      ServiceToken: !GetAtt FunctionCreateTables.Arn
+      ServiceToken: !GetAtt CreateDatabaseTablesFunction.Arn
+
+  QuickSightVPCConnection:
+    Type: AWS::QuickSight::VPCConnection
+    Properties:
+      RoleArn: !GetAtt QuickSightVPCConnectionRole.Arn
+      AwsAccountId: !Ref AWS::AccountId
+      SecurityGroupIds: 
+        - !Ref QuickSightVPCConnectionSecurityGroup
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Name: TestVPCConnection
+      VPCConnectionId: VDMVPCConnection
+
+  QuickSightVPCConnectionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      MaxSessionDuration: 3600
+      Policies:
+      - PolicyName: QuicksightVPCConnectionPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Resource: "*"
+            Action:
+            - "quicksight:ListVPCConnections"
+            - "quicksight:CreateVPCConnection"
+            - "quicksight:DescribeVPCConnection"
+            - "quicksight:DeleteVPCConnection"
+            - "quicksight:UpdateVPCConnection"
+            - "ec2:describeSubnets"
+            - "ec2:describeVpcs"
+            - "ec2:describeSecurityGroups"
+            - "ec2:CreateNetworkInterface"
+            - "ec2:ModifyNetworkInterfaceAttribute"
+            - "ec2:DeleteNetworkInterface"
+            - "ec2:DescribeSubnets"
+            - "ec2:DescribeSecurityGroups"
+            Effect: "Allow"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "quicksight.amazonaws.com"
+
+  QuickSightVPCConnectionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow QuickSight to connect to the RDS Database
+      SecurityGroupEgress:
+      - IpProtocol: "tcp"
+        FromPort: 3306
+        ToPort: 3306
+        DestinationSecurityGroupId: !GetAtt VDMReportingDatabaseSecurityGroup.GroupId
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub QuickSightVPCConnectionSecurityGroup_${EnvironmentName}
+
+  CreateAthenaViewsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt CreateAthenaViewsFunctionExecutionRole.Arn
+      Timeout: 60
+      Runtime: python3.11
+      Handler: lambda_function.lambda_handler
+      CodeUri: createAthenaViews/
+      Environment:
+        Variables:
+          account_number: !Ref AWS::AccountId
+          database_name: !Ref GlueDatabase
+          output_s3_bucket: !Ref MasterBucket
+          glue_table_name: !Ref DMARCJsonDataTable
+          glue_evaluated_table_name: !Ref DMARCJsonEvaluatedDataTable
+  
+  CreateAthenaViewsFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: CreateViewAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: CreateGlueTablePerm1
+                Effect: Allow
+                Action: glue:GetDatabases
+                Resource:
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}
+              - Sid: CreateGlueTablePerm22
+                Effect: Allow
+                Action:
+                  - glue:GetTable
+                  - glue:CreateTable
+                Resource:
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/*
+              - Sid: AthenaAccess
+                Effect: Allow
+                Action:
+                  - athena:StartQueryExecution
+                  - athena:GetQueryExecution
+                Resource: '*'
+              - Sid: S3ResponseAccess
+                Effect: Allow
+                Action:
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                Resource: 
+                  - !GetAtt MasterBucket.Arn
+                  - !Sub ${MasterBucket.Arn}/*
+
+  CreateAthenaViewsTrigger:
+    Type: AWS::CloudFormation::CustomResource
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt CreateAthenaViewsFunction.Arn
 
 Outputs:
-  SecretARN:
-    Description: The ARN the secret to allow you to retrieve the database password entered
-    Value: !Ref RDSSecret
-    Export:
-      Name: SecretARN
-
-  DBInstanceID:
+  VDMReportingDatabaseID:
     Description: The instance ID of the RDS instance created
-    Value: !Ref DBInstance
+    Value: !Ref VDMReportingDatabaseInstance
     Export:
-      Name: DBInstanceID
+      Name: !Sub '${AWS::StackName}-VDMReportingDBID'
 
-  QuickSightServiceRole:
-    Description: The name of the role to use when configuring QuickSight
-    Value: !Ref QSServiceRole
+  VDMReportingDatabaseName:
+    Description: The name of the database created on the RDS instance
+    Value: !Ref VDMReportingDatabaseName
     Export:
-      Name: QuickSightServiceRole
+      Name: !Sub '${AWS::StackName}-VDMReportingDBName'
 
-  VPCID:
-    Description: The ID of the VPC created to house the stack
-    Value: !Ref VPC
+  VDMReportingDatabaseSecret:
+    Description: The ARN of the Secret used to secure the VDM Database
+    Value: !Ref VDMReportingDatabaseAdminSecret
     Export:
-      Name: VPCID
+      Name: !Sub '${AWS::StackName}-VDMReportingDBSecret'
 
-  PrivateSubnet1Arn:
-    Description: The ARN of the private subnet 1 to use with QuickSight resource deployment
-    Value: !Ref PrivateSubnet1
+  GlueDataCatalog:
+    Description: The name of the Glue Data Catalog created for this data
+    Value: !Ref GlueDatabase
     Export:
-      Name: PrivateSubnet1Arn
-      
-  PrivateSubnet2Arn:
-    Description: The ARN of the private subnet 2 to use with QuickSight resource deployment
-    Value: !Ref PrivateSubnet2
+      Name: !Sub '${AWS::StackName}-GlueDataCatalog'
+
+  QuickSightVPCConnectionARN:
+    Description: The ARN of the QuickSight VPC Connection created for this solution
+    Value: !GetAtt QuickSightVPCConnection.Arn
     Export:
-      Name: PrivateSubnet2Arn
+      Name: !Sub '${AWS::StackName}-QuickSightVPCConnectionARN'
