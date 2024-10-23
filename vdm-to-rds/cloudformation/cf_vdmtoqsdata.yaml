@@ -288,7 +288,7 @@ Resources:
         "--job-bookmark-option": "job-bookmark-disable"
         "--bucketname": !Ref sesvdmBucket
         "--python-modules-installer-option": "--upgrade"
-        "--additional-python-modules": "boto3=1.28.23"
+        "--additional-python-modules": "boto3==1.28.23"
         "--historic-data-load-days": !Ref HistoricDataLoadDays
       MaxRetries: 0
       NumberOfWorkers: 4
@@ -607,7 +607,7 @@ Resources:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
       Name: TestVPCConnection
-      VPCConnectionId: VDMVPCConnection
+      VPCConnectionId: !Sub ${EnvironmentName}-VDMVPCConnection
 
   QuickSightVPCConnectionRole:
     Type: "AWS::IAM::Role"
