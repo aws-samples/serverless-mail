@@ -10,6 +10,7 @@ from botocore.client import BaseClient
 from botocore.session import Session
 
 LOG_LEVEL = getenv("LOG_LEVEL", "INFO").upper()
+IDENTITYSTORE_ID = getenv("IDENTITYSTORE_ID", None)
 IDENTITY_CENTER_INSTANCE_ARN = getenv("IDENTITY_CENTER_INSTANCE_ARN", None)
 IDENTITY_CENTER_APPLICATION_ARN = getenv("IDENTITY_CENTER_APPLICATION_ARN", None)
 WORKMAIL_ORGANIZATION_ID = getenv("WORKMAIL_ORGANIZATION_ID", None)
@@ -50,23 +51,6 @@ def get_client(service_name: str) -> BaseClient:
     session = Session()
     client = session.create_client(service_name, config=BOTO_CONFIG)
     return client
-
-
-def get_identitystore_id(ssoadmin_client: BaseClient, instance_arn: str) -> str:
-    """Querying IdentityStoreId based on IdentityCenter instance arn
-
-    :param ssoadmin_client: SsoAdmin boto3 client
-    :param instance_arn: IdentityCenter instance arn
-    :return: string with identityStore Id
-    """
-    try:
-        response = ssoadmin_client.describe_instance(
-            InstanceArn=instance_arn
-        )
-        return response['IdentityStoreId']
-    except botocore.exceptions.ClientError as e:
-        logger.error(f"Error describing identity store: {e}")
-        raise e
 
 
 def get_identity_center_application_arn(workmail_client: BaseClient, organization_id: str) -> str:
@@ -365,10 +349,6 @@ def main():
     ssoadmin_client = get_client('sso-admin')
     workmail_client = get_client('workmail')
 
-    logger.info(f"Querying IdentityStoreId based on IdentityCenter instance arn: {IDENTITY_CENTER_INSTANCE_ARN}")
-    identitystore_id = get_identitystore_id(ssoadmin_client, IDENTITY_CENTER_INSTANCE_ARN)
-    logger.info(f"Got IdentityStoreId: {identitystore_id}")
-
     # Checking if IdC integration is enabled in WorkMail and
     # application ARN is the same in script and in the WorkMail config.
     if get_identity_center_application_arn(workmail_client, WORKMAIL_ORGANIZATION_ID) != IDENTITY_CENTER_APPLICATION_ARN:
@@ -388,7 +368,7 @@ def main():
     )
 
     # Lazy initialization of query functions
-    idc_users = list_group_membership(identitystore_client, identitystore_id, OKTA_GROUP_ID_TO_ASSIGN_TO_WORKMAIL)
+    idc_users = list_group_membership(identitystore_client, IDENTITYSTORE_ID, OKTA_GROUP_ID_TO_ASSIGN_TO_WORKMAIL)
     workmail_users = get_workmail_users(workmail_client, WORKMAIL_ORGANIZATION_ID)
 
     # checking differences between WorkMail and IdentityCenter users
@@ -396,7 +376,7 @@ def main():
 
     successful_creation = 0
     for user_id in differences["create"]:
-        user = describe_idc_user(identitystore_client, identitystore_id, user_id)
+        user = describe_idc_user(identitystore_client, IDENTITYSTORE_ID, user_id)
         try:
             successful_creation += create_workmail_user(workmail_client, WORKMAIL_ORGANIZATION_ID, user)
         except botocore.exceptions.ClientError as e:
@@ -435,9 +415,16 @@ def handler(event, context):
     :param context:
     :return:
     """
-    # First of all we're checking environmental variables needed for script
+    logger.info("Starting script with following parameters: ")
+    logger.info(f"WORKMAIL_ORGANIZATION_ID: {WORKMAIL_ORGANIZATION_ID}")
+    logger.info(f"IDENTITYSTORE_ID: {IDENTITYSTORE_ID}")
+    logger.info(f"IDENTITY_CENTER_INSTANCE_ARN: {IDENTITYSTORE_ID}")
+    logger.info(f"IDENTITY_CENTER_APPLICATION_ARN: {IDENTITYSTORE_ID}")
+    logger.info(f"OKTA_GROUP_ID_TO_ASSIGN_TO_WORKMAIL: {IDENTITYSTORE_ID}")
 
+    # First of all we're checking environmental variables needed for script
     if not WORKMAIL_ORGANIZATION_ID or \
+            not IDENTITYSTORE_ID or \
             not IDENTITY_CENTER_INSTANCE_ARN or \
             not IDENTITY_CENTER_APPLICATION_ARN or \
             not OKTA_GROUP_ID_TO_ASSIGN_TO_WORKMAIL:

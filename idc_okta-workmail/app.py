@@ -1,8 +1,10 @@
 import aws_cdk as cdk
+import cdk_nag as nag
 
 from OktaIdCWorkMailLambdaExample.stack import LambdaStack
 
 app = cdk.App()
+cdk.Aspects.of(app).add(nag.AwsSolutionsChecks(verbose=True))
 LambdaStack(
     app,
     "OktaIdCWorkMailLambdaExample",
@@ -11,6 +13,7 @@ LambdaStack(
         region=""
     ),
     lambda_environment = {
+        "IDENTITYSTORE_ID": "",
         "IDENTITY_CENTER_INSTANCE_ARN": "",
         "IDENTITY_CENTER_APPLICATION_ARN": "",
         "WORKMAIL_ORGANIZATION_ID": "",

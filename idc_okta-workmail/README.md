@@ -17,6 +17,7 @@ pip install .
 ```
 
 4. Prepare your stack - change `cdk.json` file providing full path to your python within created virtual environment
+   (by default it refers to `.venv/bin/python3.12 app.py`)
 5. Bootstrap package:
 
 ```bash

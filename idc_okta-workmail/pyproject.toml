@@ -33,5 +33,6 @@ readme = "README.md"
 version = "1.0"
 dependencies = [
     "aws-cdk-lib>=2.38.0",
+    "cdk-nag>=2.35.10",
     "botocore>=1.36.2"
 ]

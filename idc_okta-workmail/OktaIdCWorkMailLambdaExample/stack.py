@@ -11,6 +11,7 @@ from aws_cdk import (
 )
 from aws_cdk.aws_iam import PolicyDocument
 from constructs import Construct
+import cdk_nag as nag
 
 
 class LambdaStack(Stack):
@@ -58,17 +59,9 @@ class LambdaStack(Stack):
                                 "identitystore:ListGroupMemberships"
                             ],
                             resources=[
-                                "*",
-                            ]
-                        ),
-                        iam.PolicyStatement(
-                            sid="AllowIdCInstanceOperations",
-                            effect=iam.Effect.ALLOW,
-                            actions=[
-                                "sso:DescribeInstance",
-                            ],
-                            resources=[
-                                lambda_environment['IDENTITY_CENTER_INSTANCE_ARN'],
+                                f"arn:aws:identitystore::{self.account}:identitystore/{lambda_environment['IDENTITYSTORE_ID']}",
+                                f"arn:aws:identitystore:::group/{lambda_environment['OKTA_GROUP_ID_TO_ASSIGN_TO_WORKMAIL']}",
+                                f"arn:aws:identitystore:::membership/*",
                             ]
                         ),
                         iam.PolicyStatement(
@@ -99,13 +92,23 @@ class LambdaStack(Stack):
             }
         )
 
+        nag.NagSuppressions.add_resource_suppressions(lambda_role, [
+            {
+                "id": "AwsSolutions-IAM5",
+                "reason": "Intended wildcard in resource for CloudWatch - we want CloudWatch to create, "
+                          "configure and use any logstream in lambda. "
+                          "Intended wildcard in resource for SES - selected action supports only wildcards."
+                          "Intended wildcard in resource for IdentityStore - listMembership action."
+            }
+        ])
+
         # Create Log Group with retention
         log_group = logs.LogGroup(
             self,
             "ScheduledLambdaSyncrhonizerLogGroup",
             log_group_name=f"/aws/lambda/{construct_id}",
-            retention=logs.RetentionDays.ONE_WEEK,  # Adjust retention period as needed
-            removal_policy=RemovalPolicy.DESTROY  # Optional: auto-delete when stack is destroyed
+            retention=logs.RetentionDays.ONE_MONTH,  # Adjust retention period as needed.
+            removal_policy=RemovalPolicy.DESTROY  # Optional: auto-delete when stack is destroyed. Should be changed on production.
         )
 
         dependencies_layer = _lambda.LayerVersion(
@@ -114,21 +117,21 @@ class LambdaStack(Stack):
             code=_lambda.Code.from_asset(
                 "OktaIdCWorkMailLambdaExample/lambda",
                 bundling=BundlingOptions(
-                    image=_lambda.Runtime.PYTHON_3_12.bundling_image,
+                    image=_lambda.Runtime.PYTHON_3_13.bundling_image,
                     command=[
                         "bash", "-c",
                         "pip install -r requirements.txt -t /asset-output/python && cp -au . /asset-output/python"
                     ],
                 )
             ),
-            compatible_runtimes=[_lambda.Runtime.PYTHON_3_12],
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_13],
         )
 
         # Create Lambda function with the role
         lambda_function = _lambda.Function(
             self,
             "ScheduledLambdaSyncrhonizer",
-            runtime=_lambda.Runtime.PYTHON_3_12,
+            runtime=_lambda.Runtime.PYTHON_3_13,
             handler="main.handler",
             code=_lambda.Code.from_asset(
                 "OktaIdCWorkMailLambdaExample/lambda",
@@ -138,7 +141,7 @@ class LambdaStack(Stack):
             memory_size=128,
             role=lambda_role,
             environment={
-                **lambda_environment,
+                **lambda_environment, # Lambda Environment Variables
             },
             log_group=log_group,
         )
