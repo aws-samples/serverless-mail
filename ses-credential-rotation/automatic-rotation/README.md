@@ -1,6 +1,6 @@
 # Amazon SES Credential Rotation
 
-This folder contains Cloudformation templates and Lambda code that deploys the Automatic Amazon SES Credential Rotation solution outlined in [this blog post](https://aws.amazon.com/blogs)
+This folder contains Cloudformation templates and Lambda code that deploys the Automatic Amazon SES Credential Rotation solution outlined in [this blog post]([https://aws.amazon.com/blogs](https://aws.amazon.com/blogs/messaging-and-targeting/automate-the-creation-rotation-of-amazon-simple-email-service-smtp-credentials/))
 
 ## Deployment
 
