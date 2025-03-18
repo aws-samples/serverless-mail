@@ -1,0 +1,4 @@
+botocore>=1.36.2
+aws-cdk-lib
+cdk-nag
+aws-cdk.aws-lambda-python-alpha
