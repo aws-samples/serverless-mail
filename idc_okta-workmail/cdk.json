@@ -1,0 +1,4 @@
+{
+  "app": ".venv/bin/python3 app.py",
+  "profile": "default"
+}

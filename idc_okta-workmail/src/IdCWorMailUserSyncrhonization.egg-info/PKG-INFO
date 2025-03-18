@@ -1,0 +1,41 @@
+Metadata-Version: 2.2
+Name: IdCWorMailUserSyncrhonization
+Version: 1.0
+Description-Content-Type: text/markdown
+Requires-Dist: aws-cdk-lib==2.181.1
+Requires-Dist: aws-cdk.aws-lambda-python-alpha==2.181.1a0
+Requires-Dist: cdk-nag==2.35.10
+Requires-Dist: botocore==1.36.2
+
+## OktaIdCWorkMailLambdaExample
+
+Example script creates AWS Lambda which runs every 15 minutes and performs users synchronization between 
+IdentityCenter and WorkMail. The synchronization works in one way, creating, enabling or disabling WorkMail users
+based on their existence in IdentityCenter.
+
+### General Workflow
+
+1. Edit `app.py` file providing your accountId and region. 
+2. Also enter needed details for your Lambda environment in `app.py` file.
+3. Prepare your local environment for local testing: 
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install .
+```
+
+4. Prepare your stack - change `cdk.json` file providing full path to your python interpreter within created virtual environment
+   (by default it refers to `.venv/bin/python3.12 app.py`)
+5. Bootstrap package:
+
+```bash
+cdk bootstrap
+```
+
+6. Deploy your package (cdk will automatically synthesize your app as the first step before deploying)
+
+```bash
+cdk deploy
+```

@@ -1,0 +1,4 @@
+aws-cdk-lib==2.181.1
+aws-cdk.aws-lambda-python-alpha==2.181.1a0
+cdk-nag==2.35.10
+botocore==1.36.2

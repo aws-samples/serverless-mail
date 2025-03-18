@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/stack.py
+src/IdCWorMailUserSyncrhonization.egg-info/PKG-INFO
+src/IdCWorMailUserSyncrhonization.egg-info/SOURCES.txt
+src/IdCWorMailUserSyncrhonization.egg-info/dependency_links.txt
+src/IdCWorMailUserSyncrhonization.egg-info/requires.txt
+src/IdCWorMailUserSyncrhonization.egg-info/top_level.txt
+src/lambda_code/main.py
