@@ -761,7 +761,7 @@ Resources:
     Properties:
       Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 30
-      Runtime: python3.9
+      Runtime: python3.12
       FunctionName: downloadvdmqsfiles
       Handler: index.lambda_handler
       Code:
@@ -846,7 +846,7 @@ Resources:
     Properties:
       Role: !GetAtt LambdaVDMExecRole.Arn
       Timeout: 90
-      Runtime: python3.9
+      Runtime: python3.12
       FunctionName: createsesvdmtables
       Handler: lambda_function.lambda_handler
       VpcConfig:
