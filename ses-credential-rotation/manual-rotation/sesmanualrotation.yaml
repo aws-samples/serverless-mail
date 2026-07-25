@@ -69,7 +69,7 @@ Resources:
       CodeUri: ../ses_credential_custom_resource_calculator/
       Handler: lambda_function.handler
       Role: !GetAtt SecretProcessorFunctionRole.Arn
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 15
       Architectures:
         - arm64
@@ -432,7 +432,7 @@ Resources:
       CodeUri: ../rotation_notifier/
       Handler: lambda_function.handler
       Role: !GetAtt ConfirmationEmailLambdaExecutionRole.Arn
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 15
       Architectures:
         - arm64
@@ -581,7 +581,7 @@ Resources:
       CodeUri: ../notification_callback/
       Handler: lambda_function.handler
       Role: !GetAtt "ConfirmationLambdaFunctionRole.Arn"
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 15
       Architectures:
         - arm64  
@@ -630,7 +630,7 @@ Resources:
       CodeUri: ../step_function_starter/
       Handler: lambda_function.handler
       Role: !GetAtt "StarterLambdaFunctionRole.Arn"
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 15
       Architectures:
         - arm64  
@@ -707,7 +707,7 @@ Resources:
       CodeUri: ../ses_credential_calculator/
       Handler: lambda_function.handler
       Role: !GetAtt SMTPCredentialGeneratorFunctionRole.Arn
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 15
       Architectures:
         - arm64

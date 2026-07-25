@@ -88,7 +88,7 @@ Resources:
       CodeUri: ../ses_credential_rotator/
       Handler: lambda_function.handler
       Role: !GetAtt SESSecretRotationFunctionRole.Arn
-      Runtime: python3.10
+      Runtime: python3.12
       Timeout: 75
       Architectures:
         - arm64
