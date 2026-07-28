@@ -1,0 +1,4 @@
+# Vendored third-party libraries - not maintained by this project
+vdm-to-rds/createsesvdmtables/pymysql/
+lambda-email-parser/xmltodict.py
+ses-credential-rotation/ses_credential_custom_resource_calculator/crhelper/

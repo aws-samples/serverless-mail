@@ -2,6 +2,7 @@ import os
 import boto3
 import email
 import json
+import logging
 import re
 import uuid
 import xmltodict
@@ -10,10 +11,10 @@ from io import BytesIO
 import io
 
 
-# added json conversion - jhblee@
-
 s3 = boto3.client("s3")
 workmail_message_flow = boto3.client('workmailmessageflow')
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def unzip_gz_content(gz_content):
   with gzip.open(io.BytesIO(gz_content), "rb") as f:
@@ -26,7 +27,7 @@ def xml_to_json(xml_string):
    return json_data
     
 def lambda_handler(event, context):
-   print(json.dumps(event))
+   logger.info("Processing email event")
    destination_bucket = os.environ.get('destination_bucket')
    dmarc_report_bucket = os.environ.get('dmarc_report_bucket')
    dmarc_report_bucket_folder = os.environ.get('dmarc_report_bucket_folder')
@@ -144,7 +145,6 @@ def lambda_handler(event, context):
             
             # store the decoded MIME part in S3 with the filename appended to the object key
             s3.put_object(Bucket = destination_bucket, Key = key_prefix + "/mimepart" + str(part_idx) + "_" + filename, Body = content)
-            print(content)
 
             
             if content_type in ["application/gzip", "application/x-gzip"]:

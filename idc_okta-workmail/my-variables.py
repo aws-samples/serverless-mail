@@ -1,22 +1,26 @@
 import subprocess
 import json
 
-def run_aws_command(command):
+
+def run_aws_command(command_args):
     """Runs an AWS CLI command and returns the output as a string, stripping any extra whitespace."""
     try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        result = subprocess.run(command_args, capture_output=True, text=True)
         if result.returncode != 0:
             return f"Error: {result.stderr.strip()}"
         return result.stdout.strip() or "Error: No data returned"
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 def get_identity_center_instance():
     """Fetches the Identity Center Instance ARN and Identity Store ID."""
     try:
-        command = "aws sso-admin list-instances --output json"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        result = subprocess.run(
+            ["aws", "sso-admin", "list-instances", "--output", "json"],
+            capture_output=True, text=True
+        )
+
         if result.returncode != 0:
             return None, f"Error: {result.stderr.strip()}"
 
@@ -33,15 +37,18 @@ def get_identity_center_instance():
     except Exception as e:
         return None, f"Error: {str(e)}"
 
+
 def get_identity_center_application_arn(instance_arn):
     """Fetches the first available Identity Center Application ARN."""
     if not instance_arn or "Error" in instance_arn:
         return "Error: Invalid or missing Identity Center Instance ARN"
 
     try:
-        command = f"aws sso-admin list-applications --instance-arn {instance_arn} --output json"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        result = subprocess.run(
+            ["aws", "sso-admin", "list-applications", "--instance-arn", instance_arn, "--output", "json"],
+            capture_output=True, text=True
+        )
+
         if result.returncode != 0:
             return f"Error: {result.stderr.strip()}"
 
@@ -55,14 +62,17 @@ def get_identity_center_application_arn(instance_arn):
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 def get_idc_group_id(identity_store_id, group_name="workmail_users"):
     """Fetches the Group ID of a specified IAM Identity Center (IdC) group by name."""
     if not identity_store_id or "Error" in identity_store_id:
         return "Error: Invalid or missing Identity Store ID"
 
     try:
-        command = f"aws identitystore list-groups --identity-store-id {identity_store_id} --output json"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        result = subprocess.run(
+            ["aws", "identitystore", "list-groups", "--identity-store-id", identity_store_id, "--output", "json"],
+            capture_output=True, text=True
+        )
 
         if result.returncode != 0:
             return f"Error: {result.stderr.strip()}"
@@ -81,12 +91,15 @@ def get_idc_group_id(identity_store_id, group_name="workmail_users"):
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 def get_active_workmail_organization_id():
     """Fetches the WorkMail Organization ID for the first active organization."""
     try:
-        command = "aws workmail list-organizations --output json"
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+        result = subprocess.run(
+            ["aws", "workmail", "list-organizations", "--output", "json"],
+            capture_output=True, text=True
+        )
+
         if result.returncode != 0:
             return f"Error: {result.stderr.strip()}"
 
@@ -104,10 +117,11 @@ def get_active_workmail_organization_id():
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 # Fetch general AWS configuration details
 commands = {
-    "AWS Account ID": "aws sts get-caller-identity --query 'Account' --output text",
-    "AWS Region": "aws configure get region",
+    "AWS Account ID": ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+    "AWS Region": ["aws", "configure", "get", "region"],
 }
 
 aws_values = {key: run_aws_command(cmd) for key, cmd in commands.items()}

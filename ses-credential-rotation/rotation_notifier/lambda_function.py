@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 
 def handler(event, context):
-    print(f'Received event {event}')
+    print("Processing rotation notification")
 
     inputEvent = event['ExecutionContext']['Execution']['Input']
     server = inputEvent['Server']

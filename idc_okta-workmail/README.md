@@ -1,8 +1,8 @@
 ## OktaIdCWorkMailLambdaExample
 
 >**BE AWARE:** This code base is an [Open Source](LICENSE) starter project designed to provide a demonstration and a base to start from for specific use cases.
-THe code in this sample should not be considered Production-ready.
-Do NOT deploy and use this in a Production environment without carefully evaluating all aspects of the solution and getting authorization from your organization's security team.
+This code is provided as a sample for demonstration purposes only and should not be used in production environments without thorough security review and testing.
+Do NOT deploy and use this in a production environment without carefully evaluating all aspects of the solution and getting authorization from your organization's security team.
 
 ## Use-case scenario
 The example CDK herein is a companion to the AWS blog post [Enable single-sign-on for Amazon WorkMail with IAM Identity Center and Okta](https://aws-blogs-prod.amazon.com/messaging-and-targeting/enable-single-sign-on-for-amazon-workmail-with-iam-identity-center-and-okta-universal-directory/) that describes the process needed to integrate Amazon WorkMail with Okta Identity via IAM IdentityCenter. More information about the AWS CDK is [here](https://aws.amazon.com/cdk/).

@@ -10,7 +10,7 @@ workmail_message_flow = boto3.client('workmailmessageflow')
 logger = logging.getLogger()
 
 def lambda_handler(event, context):
-   logger.error(json.dumps(event))
+   logger.info("Processing email event")
    destination_bucket = os.environ.get('destination_bucket')
    key_prefix = None
    if not destination_bucket:

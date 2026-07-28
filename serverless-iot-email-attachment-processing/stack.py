@@ -38,8 +38,8 @@ class SesStack(Stack):
         if not recipient_email or not re.fullmatch(EMAIL_REGEX, recipient_email):
             raise ValueError(f"Please provide recipient email address. The provided sender value is {recipient_email}")
 
-        sns_key = kms.Key(self, "sns-topic-key", alias="sns-key", )
-        logs_key = kms.Key(self, "log-key")
+        sns_key = kms.Key(self, "sns-topic-key", alias="sns-key", enable_key_rotation=True)
+        logs_key = kms.Key(self, "log-key", enable_key_rotation=True)
 
         # Grant CloudWatch access to the KMS keys
         sns_key.add_to_resource_policy(iam.PolicyStatement(

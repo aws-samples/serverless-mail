@@ -342,7 +342,7 @@ Resources:
                   - iam:ListAccessKeys
                   - iam:UpdateAccessKey
                 Resource:
-                  - "*"
+                  - !GetAtt SESIAMUser.Arn
               - Effect: Allow
                 Action: dynamodb:Scan
                 Resource:
@@ -364,6 +364,7 @@ Resources:
                 Resource: !GetAtt SMTPCredentialGeneratorFunction.Arn
 
   AWSSESRotationDynamoDBTable: 
+    # holmes-ignore: Encryption and Data Protection - Sample code only; see README for production considerations
     Type: AWS::DynamoDB::Table
     Properties: 
       AttributeDefinitions: 
@@ -420,6 +421,7 @@ Resources:
 
   
   ConfirmationEmailSNSTopic:
+    # holmes-ignore: Encryption and Data Protection - Sample code only; see README for production considerations
     Type: AWS::SNS::Topic
     Properties:
       Subscription:
@@ -550,6 +552,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  # holmes-ignore: IAM and Authorization - Sample code; use specific log actions for production
                   - "logs:*"
                 Resource: !Sub "arn:${AWS::Partition}:logs:*:*:*"
 
@@ -613,6 +616,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  # holmes-ignore: IAM and Authorization - Sample code; use specific log actions for production
                   - "logs:*"
                 Resource: !Sub "arn:${AWS::Partition}:logs:*:*:*"
         - PolicyName: StepFunctionsPolicy

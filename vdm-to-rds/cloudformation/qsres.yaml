@@ -44,7 +44,7 @@ Resources:
             VpcConnectionProperties: 
                 VpcConnectionArn: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:vpcConnection/27ddb001-8b34-4564-a8bd-2ed58e402a18"
             SslProperties: 
-                DisableSsl: false
+                # SSL is enabled by default in QuickSight; no need to set DisableSsl
 
     QuickSightDataSource2:
         Type: "AWS::QuickSight::DataSource"
@@ -57,7 +57,7 @@ Resources:
                 AthenaParameters: 
                     WorkGroup: "primary"
             SslProperties: 
-                DisableSsl: false
+                # SSL is enabled by default in QuickSight; no need to set DisableSsl
 
     QuickSightDataSet:
         Type: "AWS::QuickSight::DataSet"
@@ -172,7 +172,7 @@ Resources:
             FieldFolders: {}
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -193,7 +193,7 @@ Resources:
                   - "quicksight:DeleteDataSetRefreshProperties"
                   - "quicksight:DescribeIngestion"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -269,7 +269,7 @@ Resources:
             ImportMode: "SPICE"
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:DescribeRefreshSchedule"
                   - "quicksight:ListIngestions"
@@ -279,7 +279,7 @@ Resources:
                   - "quicksight:DescribeDataSet"
                   - "quicksight:DescribeIngestion"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -438,7 +438,7 @@ Resources:
             FieldFolders: {}
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -459,7 +459,7 @@ Resources:
                   - "quicksight:DeleteDataSetRefreshProperties"
                   - "quicksight:DescribeIngestion"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -566,7 +566,7 @@ Resources:
             ImportMode: "DIRECT_QUERY"
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -587,7 +587,7 @@ Resources:
                   - "quicksight:DeleteDataSetRefreshProperties"
                   - "quicksight:DescribeIngestion"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:DeleteDataSet"
                   - "quicksight:UpdateDataSetPermissions"
@@ -617,7 +617,7 @@ Resources:
             SourceEntity: "REPLACEME"
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:RestoreAnalysis"
                   - "quicksight:UpdateAnalysisPermissions"
@@ -636,7 +636,7 @@ Resources:
             SourceEntity: "REPLACEME"
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:RestoreAnalysis"
                   - "quicksight:UpdateAnalysisPermissions"
@@ -646,7 +646,7 @@ Resources:
                   - "quicksight:DescribeAnalysis"
                   - "quicksight:UpdateAnalysis"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:RestoreAnalysis"
                   - "quicksight:UpdateAnalysisPermissions"
@@ -664,7 +664,7 @@ Resources:
             AwsAccountId: !Ref AWS::AccountId
             Permissions: 
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/evaleah-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-1"
                 Actions: 
                   - "quicksight:DescribeDashboard"
                   - "quicksight:ListDashboardVersions"
@@ -675,7 +675,7 @@ Resources:
                   - "quicksight:DescribeDashboardPermissions"
                   - "quicksight:UpdateDashboardPublishedVersion"
               - 
-                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/jhblee-Isengard"
+                Principal: !Sub "arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:user/default/Admin/example-user-2"
                 Actions: 
                   - "quicksight:DescribeDashboard"
                   - "quicksight:ListDashboardVersions"
