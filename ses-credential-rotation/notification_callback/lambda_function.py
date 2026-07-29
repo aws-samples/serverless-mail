@@ -3,7 +3,7 @@ import json
 
 
 def handler(event, context):
-    print(f'Received event {event}')
+    print(f'Received callback with action: {event.get("query", {}).get("action", "unknown")}')
 
     token = event['query']['taskToken']
 

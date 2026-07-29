@@ -4,7 +4,7 @@ import datetime
 
 
 def handler(event, context):
-    print(f'Received event {event}')
+    print(f'Received event from source: {event.get("source", "unknown")}')
 
     stepFunctionArn = os.environ['StepFunctionArn']
     currentDate = datetime.datetime.now()

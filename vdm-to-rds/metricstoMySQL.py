@@ -1,4 +1,5 @@
 import sys
+import re
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
@@ -9,6 +10,12 @@ from pyspark.sql.functions import lit
 from pyspark.sql.utils import AnalysisException
 from datetime import date
 import boto3
+
+
+# Allowlist pattern for valid table names (alphanumeric and underscores only)
+VALID_TABLE_NAME_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+# Valid date format (ISO date: YYYY-MM-DD)
+VALID_DATE_PATTERN = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
 ## @params: [JOB_NAME, bucketname]
@@ -48,6 +55,15 @@ for page in result:
                     keyParse = keyString.split(".")
                     tblname = keyParse[0]
                     tbldate = keyParse[1]
+
+                    # Validate table name and date to prevent SQL injection
+                    if not VALID_TABLE_NAME_PATTERN.match(tblname):
+                        logger.warn("Invalid table name format, skipping: " + keyString)
+                        continue
+                    if not VALID_DATE_PATTERN.match(tbldate):
+                        logger.warn("Invalid date format, skipping: " + keyString)
+                        continue
+
                     logger.info("tblname: " + tblname + " tbldate: " + tbldate + " keyString: " + keyString)
     
                     # if data already exists for this date, skip it
@@ -55,7 +71,7 @@ for page in result:
                         "dbtable": tblname,
                         "useConnectionProperties": "true",
                         "connectionName": mysqlconn,
-                        "sampleQuery": "select IMPORT_DATE from {} where METRIC_DATE = '{}' limit 1".format(tblname,tbldate)
+                        "sampleQuery": f"select IMPORT_DATE from {tblname} where METRIC_DATE = '{tbldate}' limit 1"
                     }
                     dyf_dt = glueContext.create_dynamic_frame.from_options('mysql', connection_options = conDt, transformation_ctx = "dyf_dt")
     

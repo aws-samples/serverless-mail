@@ -111,5 +111,5 @@ def delete(event, context):
 
 
 def handler(event, context):
-    logger.info(event)
+    logger.info("Received %s request for %s", event.get('RequestType', 'Unknown'), event.get('LogicalResourceId', 'Unknown'))
     helper(event, context)

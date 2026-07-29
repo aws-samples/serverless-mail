@@ -40,6 +40,7 @@ Parameters:
 Resources:
 
   # S3 Buckets
+  # holmes-ignore: CKV_AWS_21, CKV_AWS_18 - Sample code; versioning and access logging should be enabled for production use
   MasterBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -339,7 +340,8 @@ Resources:
       MasterUserPassword: !Ref DBPassword
       DBInstanceClass: db.t3.micro
       AllocatedStorage: 5
-      PubliclyAccessible: false 
+      PubliclyAccessible: false
+      StorageEncrypted: true
       DeletionProtection: false
       DBSubnetGroupName: !Ref DBSubnetGroup
       VPCSecurityGroups: 
@@ -671,27 +673,19 @@ Resources:
         FromPort: 0
         SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
         ToPort: 65535
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "-1"
-        FromPort: -1
-        ToPort: -1
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "tcp"
-        FromPort: 22
-        ToPort: 22
+      - IpProtocol: "tcp"
+        FromPort: 3306
+        SourceSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
+        ToPort: 3306
+      SecurityGroupEgress:
       - CidrIp: "0.0.0.0/0"
         IpProtocol: "tcp"
         FromPort: 443
         ToPort: 443
-      SecurityGroupEgress:
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "tcp"
-        FromPort: 0
-        ToPort: 65535
-      - CidrIp: "0.0.0.0/0"
-        IpProtocol: "-1"
-        FromPort: -1
-        ToPort: -1  
+      - IpProtocol: "tcp"
+        FromPort: 3306
+        DestinationSecurityGroupId: !GetAtt VPC.DefaultSecurityGroup
+        ToPort: 3306
       VpcId: !Ref VPC
       Tags:
         - Key: Name

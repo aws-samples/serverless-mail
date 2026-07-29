@@ -247,7 +247,7 @@ def _mark_new_secret_as_current(secret_client, secret_arn, token):
 
 def handler(event, context):
 
-    logger.info(f"Received Event : {event}")
+    logger.info(f"Received rotation event - Step: {event.get('Step')}")
 
     # Get the event input values
     secret_arn = event['SecretId']

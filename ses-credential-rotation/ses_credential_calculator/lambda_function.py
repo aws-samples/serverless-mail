@@ -33,7 +33,7 @@ def calculate_key(secret_access_key, region):
 
 
 def handler(event, context):
-    logger.info(event)
+    logger.info("Processing credential calculation request")
     access_key_id = event['AccessKeyId']
     secret_access_key = event['SecretAccessKey']
     smtp_password = calculate_key(secret_access_key, region)
